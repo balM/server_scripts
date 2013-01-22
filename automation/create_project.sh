@@ -28,24 +28,33 @@
  txtred=$(tput setaf 1) # Red
  txtcyn=$(tput setaf 6) # Cyan
  
+# clear the screen
+ tput clear
+
+# Move cursor to screen location X,Y (top left is 0,0)
+ tput cup 3 10
+
+# Set reverse video mode
+tput rev
  echo
  echo "${txtred}"
  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
  echo "!!!                                      WARNING!                                                    !!!"
- echo "!!!         The script is still under heavy development.                                      !!!"
- echo "!!!        WHAT TO EXPECT:                                                                            !!!"
- echo "!!!        - the script WILL create a new project                                                     !!!"
- echo "!!!        - the script WILL use the core specified by the user                                       !!!"
- echo "!!!        - the script WILL clone the core and prepare the WEB environment                           !!!"
- echo "!!!                                                                                                   !!!"
- echo "!!!      PLEASE READ THE INSTRUCTION DISPLAYED AFTER THE SCRIPT IS RUN.                               !!!"
+ echo "!!!         The script is still under heavy development.                                             !!!"
+ echo "!!!        WHAT TO EXPECT:                                                                           !!!"
+ echo "!!!        - the script WILL create a new project                                                    !!!"
+ echo "!!!        - the script WILL use the core specified by the user                                      !!!"
+ echo "!!!        - the script WILL clone the core and prepare the WEB environment                          !!!"
+ echo "!!!                                                                                                  !!!"
+ echo "!!!      PLEASE READ THE INSTRUCTION DISPLAYED AFTER THE SCRIPT IS RUN.                              !!!"
  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
  echo ""
  echo "${txtrst}"
-
+tput sgr0
 echo ""
 echo "Continue?"
 echo ""
+
 
 #wait for user decision
 proceed() {
