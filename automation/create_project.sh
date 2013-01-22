@@ -23,49 +23,10 @@
 # a lot of work to be done here :)
 ##################################################################################
 
-ITLE='CREATE NEW PROJECT -  MENU'
-BACKTITLE='part of the automation process...'
-RESULT='not quit'
-until [ "$RESULT" = 'quit' ]
-do
-  RESULT=$(whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --nocancel --menu "Please select the CORE..." 20 50 11 \
-    Drupal       'Select a DRUPAL Core' \
-    Code_Igniter 'Select a CODE IGNITER Core' \
-    Readme       'What to expect from this script' \
-    quit         'EXIT' \
-    2>&1 >/dev/tty )
-
-# respond to the user selection from the main menu
-TITLE="\"$RESULT\" selected..."
-  case $RESULT in
-    'Drupal')
-      whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --yesno "Create the new project using a DRUPAL Core?"  12 40
-        ;;
-    'Code_Igniter')
-      whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --msgbox "\n\n\nNot implemented ... yet\n"  12 40
-        ;;
-    'Readme')
-     whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --msgbox "\n
-        !!!                               WARNING!                              !!!\n
-        !!! The script is still under heavy development.                        !!!\n
-        !!! WHAT TO EXPECT:                                                     !!!\n
-        !!!   - the script WILL create a new project                            !!!\n
-        !!!   - the script WILL use the core specified by the user              !!!\n
-        !!!   - the script WILL clone the core and prepare the WEB environment  !!!\n
-        !!!                                                                     !!!\n
-        !!!      PLEASE READ THE INSTRUCTION DISPLAYED AFTER THE SCRIPT IS RUN. !!!\n
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n
-        \n" 30 90
-        ;;
-
-    'quit')
-      printf "Script terminated...\n";
-      exit 0;
-      ;;
-    *)
-  esac
-done
-
+##################################################################################
+# We need to define our functions first. The main manu will need access to them
+# in order to work
+##################################################################################
 
 
 # Start a new project.
@@ -75,180 +36,34 @@ done
 # Create git repos in /var/www for each DEV, STAGGING and LIVE (maybe?)
 # setup hooks for updates
 
- txtrst=$(tput sgr0) # Text reset
- txtred=$(tput setaf 1) # Red
- txtcyn=$(tput setaf 6) # Cyan
- 
-# clear the screen
- tput clear
+# function to clone the drupal core
+clone_drupal() {
 
-# Move cursor to screen location X,Y (top left is 0,0)
- tput cup 3 10
-
-# Set reverse video mode
-tput rev
- echo
- echo "${txtred}"
- echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
- echo "!!!                                      WARNING!                                                    !!!"
- echo "!!!         The script is still under heavy development.                                             !!!"
- echo "!!!        WHAT TO EXPECT:                                                                           !!!"
- echo "!!!        - the script WILL create a new project                                                    !!!"
- echo "!!!        - the script WILL use the core specified by the user                                      !!!"
- echo "!!!        - the script WILL clone the core and prepare the WEB environment                          !!!"
- echo "!!!                                                                                                  !!!"
- echo "!!!      PLEASE READ THE INSTRUCTION DISPLAYED AFTER THE SCRIPT IS RUN.                              !!!"
- echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
- echo ""
- echo "${txtrst}"
-tput sgr0
-echo ""
-echo "Continue?"
-echo ""
-
-
-#wait for user decision
-proceed() {
-echo "*******************************************************************************"
-echo "1)yes"
-echo "2)no"
-echo "*******************************************************************************"
-}
-while [ 1 ]
-do
-        proceed
-        read decision
-        case "$decision" in
-        "1")
-                echo "OK"
-                echo
-                break
-                ;;
-        "2")
-                echo "${txtred}Script terminated.${txtrst}"
-                echo
-                exit
-                ;;
-        esac
-done
-
-CORE_SELECTED=""
 DRUPAL_CORE="/home/andy/cores/drupal/"
-CODEIGNITER_CORE="/home/andy/cores/codeigniter/"
-
-echo
-echo "<<<<<     Please input a NAME for new project....     >>>>>"
-echo
-# read user input
-read projectname
-
-# project core
-echo
-echo "${txtred}Please select project core.${txtrst}"
-echo "Project CORE: Drupal/Codeigniter"
-core_select() {
-echo "*******************************************************************************"
-echo "1)Drupal"
-echo "2)Code-Igniter"
-echo "3)${txtred}EXIT${txtrst}"
-echo "*******************************************************************************"
-
-#display infos about the CORE; version, last commiter, etc.
-#we keep all this informations in the "release" file inside teh core folder
-
- echo
- echo "${txtcyn}============================================================================================"
- echo "Additional information about the DRUPAL CORE used:                                         "
- echo "============================================================================================${txtrst}"
- echo
-
-cd $DRUPAL_CORE
-while read line
-      do
-           echo -e "$line \n"
-      done < release
-
-}
-
-while [ 1 ]
-do
-        core_select
-        read CORE
-        case "$CORE" in
-        "1")
-                echo "DRUPAL core selected."
-                echo
-                CORE_SELECTED="drupal"
-                break
-                ;;
-        "2")
-                echo "CODE-IGNITER core selected."
-                echo
-                CORE_SELECTED="codeigniter"
-                break
-                ;;
-        "3")
-                echo
-                echo "${txtred}Script terminated${txtrst}"
-                echo
-                exit
-                ;;
-
-        esac
-done
-
-#tput setaf 7
-
-#define working dirs ---- change this path once the script is tested!
-#live
-#/etc/init.d/apache2 reload
 REPO_PATH="/home/andy/repos/projects/"
 prefix="genesis_"
+
+# will get the projectname from an input box, once the DRUPAL CORE is selected
 sufix=$projectname
 appendweb="_web"
-
 DEV_ENVIROMENT=$prefix$sufix
 DEV_ENVIROMENT_WEB=$DEV_ENVIROMENT$appendweb
 WEB_PATH="/var/www/vhost/devel_sites/"
-
-###########################################################
-#
-#       Select project core : drupal/codeigniter
-#
-############################################################
-#
-#
-#selected_from_codebase=()
-
-#Just some basic text decoration.
-txtrst=$(tput sgr0) # Text reset
-        txtcyn=$(tput setaf 6) # Cyan
-        echo "Fixing path and bringing the ${txtcyn}CORE${txtrst} into the new project..."
-txtrst=$(tput sgr0) # Text reset
-
-
-echo "Creating new project: $projectname"
-echo "Changing to repo location....."
-echo "Creating DEV folder for project..."
-#
-#mkdir "$DEV_ENVIROMENT"
-#
-#build-up the DEV enviroment for WEBSITE
 cd $WEB_PATH
-echo "Creating DEV folder for web..."
 mkdir "$DEV_ENVIROMENT_WEB"
 cd $DEV_ENVIROMENT_WEB
-#
+
 git init
 git add .
 
 git commit
 
-#####
+##################################################################################
 #
-# Bring the files in .... !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# Bring the files in .... !!!
 #
-#####
+##################################################################################
+
 # build-up the repo in DEV
 
 #cd $REPO_PATH
@@ -271,12 +86,7 @@ git push $REPO_PATH$DEV_ENVIROMENT master
 #We need to make sure that the .hub. repository is configured as a remote for the live repository.
 # we are in the correct location?
 #
-echo
-echo "Starting to configure hooks...."
-echo
-#
-# append to .git/config
-#
+
 echo '[remote "hub"]
         url ='$REPO_PATH$prefix$sufix'
         fetch = +refs/heads/*:refs/remotes/hub/*' >> .git/config
@@ -308,28 +118,6 @@ exec git-update-server-info
 EOF
 #
 chmod +x hooks/post-update
-
-#######################################################################################################################
-#######################################################################################################################
-#                               Move this so we wont have any problems once we start git
-#######################################################################################################################
-#######################################################################################################################
-#######################################################################################################################
-#
-#       perform some maintenace.
-#       If is a DRUPAL project we need to rename teh .htaccess file from www
-#       Also, set read/write permissions fo www/sites/default
-############################################################################################
-
-#####################################################################
-#
-# Bring the core
-#
-#####################################################################
-
-
-if [ "$CORE_SELECTED"="drupal" ]
-then
         #start the core relocation
         cd $DRUPAL_CORE
         cp .gitignore $WEB_PATH$DEV_ENVIROMENT_WEB
@@ -342,64 +130,102 @@ then
         #go to the right location
         cd $WEB_ROOT_DRUPAL
         #the default .htaccess file
-        txtgreen=$(tput setaf 2) # Green
-                echo
-                echo "${txtgreen}Updating .htaccess file.Changing RewriteRule to default...${txtrst}"
-                echo
         cp sample.htaccess .htaccess
 
 #       PUSH
         cd $WEB_PATH$DEV_ENVIROMENT_WEB
-         txtgreen=$(tput setaf 2) # Green
-                echo
-                echo "${txtgreen}Updating the ORIGIN ... This may take some time :)${txtrst}"
-                echo
         git add .
         git commit -m "Core and assets"
         git push hub master
 
-# CHECK if the folder are already in the core !!!
-#ok, go to sites/ and set permissions
-#       cd sites/default
-#       mkdir files
-#       mkdir private
-#       chmod 777 -R files/
-#       chmod 777 -R private
-
-else
-        break
-fi
+}
 
 
 
-##############################################################################################
-#
-#       permissions ???
-#
-##############################################################################################
- txtgreen=$(tput setaf 2) # Green
-                echo
-                echo "${txtgreen}Initial deploy complete. Setting the permissions...This will be quick...${txtrst}"
-                echo
+TITLE='CREATE NEW PROJECT -  MENU'
+BACKTITLE='part of the automation process...'
+RESULT='not quit'
+until [ "$RESULT" = 'quit' ]
+do
+  RESULT=$(whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --nocancel --menu "Please select the CORE..." 20 50 11 \
+    Drupal       'Select a DRUPAL Core' \
+    Code_Igniter 'Select a CODE IGNITER Core' \
+    Readme       'What to expect from this script' \
+    quit         'EXIT' \
+    2>&1 >/dev/tty )
 
-chown -R git $WEB_PATH$DEV_ENVIROMENT_WEB
-chown -R git $REPO_PATH$DEV_ENVIROMENT
-##############################################################################################
-# prepare Apache vhost setup
-# use local folder for testing purpose
-#
-#echo "Setting up Apache vhost for the new project....."
-#
-# start with a blank vhost file ...the file will be named as
-# projectname_vhost
-#
-#echo "Using default vhost configuration file...."
-#
-# do stuff here
-#echo "#############################################################################"
-#echo "Writing changes................................................................"
-#echo "#############################################################################"
-#
+# respond to the user selection from the main menu
+TITLE="\"$RESULT\" selected..."
+  case $RESULT in
+    'Drupal')
+      whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --yesno --defaultno "Create the new project using a DRUPAL Core?"  12 40
+        exitstatus=$?
+        if [ $exitstatus = 0 ]; then
+
+        #we need an input box where the user can enter the project name
+        #the name will be passed to clone_drupal()
+        #otherwise we will end up with an empty name __
+
+        projectname=$(whiptail --inputbox "What is the project name?" 8 78 --title "STEP 1" 3>&1 1>&2 2>&3)
+        exitstatus=$?
+                if [ $exitstatus = 0 ]; then
+                projectname=$projectname
+                clone_drupal
+                else
+                echo "No project name provided."
+                fi
+        else
+        whiptail --title "Abort" --msgbox "
+                The project will NOT be created.\n
+                Return to main menu\n" 12 78
+        fi
+        ;;
+
+    'Code_Igniter')
+      whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --msgbox "\n\n\nNot implemented ... yet\n"  12 40
+        ;;
+    'Readme')
+     whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --msgbox "\n
+        !!!                               WARNING!                              !!!\n
+        !!! The script is still under heavy development.                        !!!\n
+        !!! WHAT TO EXPECT:                                                     !!!\n
+        !!!   - the script WILL create a new project                            !!!\n
+        !!!   - the script WILL use the core specified by the user              !!!\n
+        !!!   - the script WILL clone the core and prepare the WEB environment  !!!\n
+        !!!                                                                     !!!\n
+        !!!      PLEASE READ THE INSTRUCTION DISPLAYED AFTER THE SCRIPT IS RUN. !!!\n
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n
+        \n" 30 90
+        ;;
+
+    'quit')
+      printf "Script terminated...\n";
+      exit 0;
+      ;;
+    *)
+  esac
+done
+
+
+
+
+ txtrst=$(tput sgr0) # Text reset
+ txtred=$(tput setaf 1) # Red
+ txtcyn=$(tput setaf 6) # Cyan
+ 
+# clear the screen
+ tput clear
+
+################################# VERSION - TODO: display this infos inside a msgbox
+cd $DRUPAL_CORE
+while read line
+      do
+           echo -e "$line \n"
+      done < release
+
+}
+
+
  txtrst=$(tput sgr0) # Text reset
  txtcyn=$(tput setaf 6) # Cyan
  echo
