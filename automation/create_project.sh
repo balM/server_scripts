@@ -17,6 +17,39 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 
+##################################################################################
+# 					The main menu and main loop
+##################################################################################
+# a lot of work to be done here :)
+##################################################################################
+
+TITLE='CREATE NEW PROJECT -  MENU'
+BACKTITLE='part of the automation process...'
+RESULT='not quit'
+until [ "$RESULT" = 'quit' ]
+do
+  RESULT=$(whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --nocancel --menu "Please select the CORE..." 20 50 11 \
+    Drupal       'Select a DRUPAL Core' \
+    Code_Igniter 'Select a CODE IGNITER Core' \
+    quit         'EXIT' \
+    2>&1 >/dev/tty )
+
+# respond to the user selection from the main menu
+TITLE="\"$RESULT\" Core selected..."
+  case $RESULT in
+    'Drupal')
+      whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --yesno "Create the new project using a DRUPAL Core?" 12 40
+      ;;
+
+    'quit')
+      printf "Script terminated...\n";
+      exit 0;
+      ;;
+    *)
+  esac
+done
+
+
 # Start a new project.
 # The script will create teh required folders for DEV, STAGGING and LIVE under /opt/repos/projects
 # Initiate git repository in DEV with the core code.
