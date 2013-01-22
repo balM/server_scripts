@@ -23,7 +23,7 @@
 # a lot of work to be done here :)
 ##################################################################################
 
-TITLE='CREATE NEW PROJECT -  MENU'
+ITLE='CREATE NEW PROJECT -  MENU'
 BACKTITLE='part of the automation process...'
 RESULT='not quit'
 until [ "$RESULT" = 'quit' ]
@@ -31,15 +31,32 @@ do
   RESULT=$(whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --nocancel --menu "Please select the CORE..." 20 50 11 \
     Drupal       'Select a DRUPAL Core' \
     Code_Igniter 'Select a CODE IGNITER Core' \
+    Readme       'What to expect from this script' \
     quit         'EXIT' \
     2>&1 >/dev/tty )
 
 # respond to the user selection from the main menu
-TITLE="\"$RESULT\" Core selected..."
+TITLE="\"$RESULT\" selected..."
   case $RESULT in
     'Drupal')
-      whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --yesno "Create the new project using a DRUPAL Core?" 12 40
-      ;;
+      whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --yesno "Create the new project using a DRUPAL Core?"  12 40
+        ;;
+    'Code_Igniter')
+      whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --msgbox "\n\n\nNot implemented ... yet\n"  12 40
+        ;;
+    'Readme')
+     whiptail --title "${TITLE}" --backtitle "${BACKTITLE}" --msgbox "\n
+        !!!                               WARNING!                              !!!\n
+        !!! The script is still under heavy development.                        !!!\n
+        !!! WHAT TO EXPECT:                                                     !!!\n
+        !!!   - the script WILL create a new project                            !!!\n
+        !!!   - the script WILL use the core specified by the user              !!!\n
+        !!!   - the script WILL clone the core and prepare the WEB environment  !!!\n
+        !!!                                                                     !!!\n
+        !!!      PLEASE READ THE INSTRUCTION DISPLAYED AFTER THE SCRIPT IS RUN. !!!\n
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n
+        \n" 30 90
+        ;;
 
     'quit')
       printf "Script terminated...\n";
@@ -48,6 +65,7 @@ TITLE="\"$RESULT\" Core selected..."
     *)
   esac
 done
+
 
 
 # Start a new project.
