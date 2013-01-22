@@ -16,6 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
+
 # Start a new project.
 # The script will create teh required folders for DEV, STAGGING and LIVE under /opt/repos/projects
 # Initiate git repository in DEV with the core code.
@@ -25,6 +26,8 @@
 
  txtrst=$(tput sgr0) # Text reset
  txtred=$(tput setaf 1) # Red
+ txtcyn=$(tput setaf 6) # Cyan
+ 
  echo
  echo "${txtred}"
  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -62,7 +65,7 @@ do
                 break
                 ;;
         "2")
-                echo "Script terminated."
+                echo "${txtred}Script terminated.${txtrst}"
                 echo
                 exit
                 ;;
@@ -87,14 +90,11 @@ core_select() {
 echo "*******************************************************************************"
 echo "1)Drupal"
 echo "2)Code-Igniter"
-echo "3)EXIT"
+echo "3)${txtred}EXIT${txtrst}"
 echo "*******************************************************************************"
 
 #display infos about the CORE; version, last commiter, etc.
 #we keep all this informations in the "release" file inside teh core folder
-
- txtrst=$(tput sgr0) # Text reset
- txtcyn=$(tput setaf 6) # Cyan
 
  echo
  echo "${txtcyn}============================================================================================"
@@ -129,7 +129,7 @@ do
                 ;;
         "3")
                 echo
-                echo "EXIT"
+                echo "${txtred}Script terminated${txtrst}"
                 echo
                 exit
                 ;;
