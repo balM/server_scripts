@@ -33,7 +33,7 @@ which pv &> /dev/null
 #change this on the DEV SERVER with the correct one
 declare -r BACKTITLE="TAG: Deploy new project. Part of the automation process."
 declare LOG_FILE="/var/log/deployment.log"
-declare TMP_FILE="$(mktemp /tmp/deployi.XXXXX)"  # always use `mktemp`
+declare TMP_FILE="$(mktemp /tmp/deploy.XXXXX)"  # always use `mktemp`
 declare TMP_PROJECT_NAME="$(mktemp /tmp/project_name.XXXXX)"
 declare -r README="/home/andy/cores/readme"
 declare DRUPAL_CORE="/home/andy/cores/drupal/"
