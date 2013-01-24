@@ -17,12 +17,16 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 ##############################################################################
-#                 Checking availability of dialog utility                    #
+#                 Checking availability of dialog and pv                     #
 ##############################################################################
 
 which dialog &> /dev/null
 
 [ $? -ne 0 ]  && echo "Dialog utility is not available, Install it" && exit 1
+
+which pv &> /dev/null
+
+[ $? -ne 0 ]  && echo "pv (pv utility is not available, Install it." && exit 1
 
 #define global PATH - make sure that the ones that won't change are read-only
 # IMPORTANT !!!
@@ -32,6 +36,8 @@ declare LOG_FILE="/var/log/deployment.log"
 declare TMP_FILE="$(mktemp /tmp/deploy.XXXXX)"  # always use `mktemp`
 declare -r README="/home/andy/cores/readme"
 declare DRUPAL_CORE="/home/andy/cores/drupal/"
+declare -r DRUPAL_ASSETS_DIR="assets"
+declare -r DRUPAL_WWW_DIR="www"
 declare CI_CORE="/home/andy/cores/igniter/"
 declare REPO_PATH="/home/andy/repos/projects/"
 declare WEB_PATH="/var/www/vhost/devel_sites/"
@@ -55,8 +61,10 @@ dialog --backtitle "$BACKTITLE" --textbox $README 15 80
 }
 ##############################################################################
 clone_drupal() {
-#we need a project name first; otherwise we will end up with something like __
-#display a inputbox where the user will specify the project name
+
+#		we need a project name first; otherwise we will end up with something like __
+#		display a inputbox where the user will specify the project name
+
 dialog --title "Drupal Project" \
 --backtitle "$BACKTITLE" \
 --inputbox "Enter project name:" 8 50 2> tempdrupalname.$$
@@ -89,10 +97,10 @@ mkdir $prefix_drupal$projectname
 cd $prefix_drupal$projectname
 git --bare init
 
-# go back to web location... go inside project folder and finnish with git
+#		go back to web location... go inside project folder and finnish with git
 cd $WEB_PATH
 cd $DEV_ENVIROMENT_WEB
-#
+
 echo "  ########################################################################
         ########################################################################" >> $LOG_FILE
 echo Initialize log >> $LOG_FILE
@@ -105,14 +113,58 @@ git push $REPO_PATH$DEV_ENVIROMENT master >> $LOG_FILE
 dialog --title "Progress log..." \
        --tailboxbg $LOG_FILE 8 58
 
-#git --bare init
-#git add .
-#git commit -m "Initial Commit."
-#git push $REPO_PATH$DEV_ENVIROMENT master
+#       Setup hooks for syncronisation
+#       We need to make sure that the .hub. repository is configured as a remote for the live repository.
 
-#dialog --tailboxbg log.txt 60 100
+(echo '[remote "hub"]
+        url ='$REPO_PATH$DEV_ENV'
+        fetch = +refs/heads/*:refs/remotes/hub/*' >> .git/config) >> $LOG_FILE
 
-#
+#       Next we need to set up a couple of hooks.
+#       The first one will make sure that any time anything is pushed to the hub repository it will be pulled into the live repo.
+#       This hook can also contain anything that needs to happen to deploy the new version
+
+cd $REPO_PATH
+cd $DEV_ENV
+touch hooks/post-update
+#       start to write
+cat > hooks/post-update <<EOF
+#!/bin/sh
+
+echo
+echo "**** Pulling changes into Live [Hub's post-update hook]"
+echo
+
+cd $WEB_PATH$DEV_ENV_WEB || exit
+unset GIT_DIR
+git pull hub master
+
+exec git-update-server-info
+
+EOF
+#       make it executable
+chmod +x hooks/post-update
+
+#       start the core relocation
+cd $DRUPAL_CORE
+cp .gitignore $WEB_PATH$DEV_ENV_WEB >> $LOG_FILE #      small file , no need for a gauge
+
+#       find out the size of each folder that we need to relocate. Start with "assets"
+#       display gauge during the copy
+#       it may be so fast that it does nor actually manage to display the gauge :)
+(cp -R $DRUPAL_ASSETS_DIR $WEB_PATH$DEV_ENV_WEB | pv -n -s -f 'du -sb . | awk'{print $1}'') 2>&1 | dialog --gauge 'Importing assets...' 7 70
+(cp -R $DRUPAL_WWW_DIR $WEB_PATH$DEV_ENV_WEB | pv -n -s -f 'du -sb . | awk'{print $1}'') 2>&1 | dialog --gauge 'Importing core...' 7 70
+
+##      all done!
+echo "#########################################################################
+###  New project created.
+###  Please check the WIKI page for the URL
+#########################################################################" >> $LOG_FILE
+
+
+dialog --title "Progress log..." \
+       --tailbox $LOG_FILE 50 100
+
 #setup hooks for syncronisation
 #We need to make sure that the .hub. repository is configured as a remote for the live repository.
 # we are in the correct location?
