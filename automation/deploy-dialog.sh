@@ -1,5 +1,21 @@
 #!/bin/bash
 
+#    Copyright (C) 2013 Alexandru Iacob
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License along
+#    with this program; if not, write to the Free Software Foundation, Inc.,
+#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
 ##############################################################################
 #                 Checking availability of dialog utility                    #
 ##############################################################################
@@ -13,6 +29,7 @@ which dialog &> /dev/null
 #change this on the DEV SERVER with the correct one
 declare -r BACKTITLE="TAG: Deploy new project. Part of the automation process."
 declare LOG_FILE="/var/log/deployment.log"
+declare TMP_FILE="$(mktemp /tmp/deploy.XXXXX)"  # always use `mktemp`
 declare -r README="/home/andy/cores/readme"
 declare DRUPAL_CORE="/home/andy/cores/drupal/"
 declare CI_CORE="/home/andy/cores/igniter/"
@@ -106,6 +123,12 @@ dialog --title "Progress log..." \
 
 
 ##############################################################################
+#Call me crazy, but without my main() function I ain't going anywhere.
+#Now we can start writing some bash.
+#Once you have your main() it means you're going to write code ONLY inside functions.
+#I don't care it's a scripting language. Let's be strict.
+
+main() {
 while :
 do
         dialog --clear --backtitle "$BACKTITLE" --title "Main Menu" \
@@ -113,19 +136,21 @@ do
 1 "Create a DRUPAL based project" \
 2 "Create a CODE IGNITER based project" \
 3 "README" \
-4 "Exit" 2> menuchoices.$$
+4 "Exit" 2> $TMP_FILE
 
     returned_opt=$?
-    choice=`cat menuchoices.$$`
+    choice=`cat $TMP_FILE`
 
     case $returned_opt in
            0) case $choice in
                   1)  clone_drupal ;;
                   2)  clone_igniter ;;
                   3)  show_readme  ;;
-                  4)  clear; rm -f menuchoices.$$; exit 0;;
+                  4)  clear; rm -f $TMP_FILE; exit 0;;
               esac ;;
-          *)clear ; rm -f menuchoices.$$; exit ;;
+          *)clear ; rm -f $TMP_FILE; exit ;;
     esac
 done
+}
+main "$@"
 
