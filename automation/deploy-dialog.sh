@@ -33,7 +33,8 @@ which pv &> /dev/null
 #change this on the DEV SERVER with the correct one
 declare -r BACKTITLE="TAG: Deploy new project. Part of the automation process."
 declare LOG_FILE="/var/log/deployment.log"
-declare TMP_FILE="$(mktemp /tmp/deploy.XXXXX)"  # always use `mktemp`
+declare TMP_FILE="$(mktemp /tmp/deployi.XXXXX)"  # always use `mktemp`
+declare TMP_PROJECT_NAME="$(mktemp /tmp/project_name.XXXXX)"
 declare -r README="/home/andy/cores/readme"
 declare DRUPAL_CORE="/home/andy/cores/drupal/"
 declare -r DRUPAL_ASSETS_DIR="assets"
@@ -67,51 +68,61 @@ clone_drupal() {
 
 dialog --title "Drupal Project" \
 --backtitle "$BACKTITLE" \
---inputbox "Enter project name:" 8 50 2> tempdrupalname.$$
+--inputbox "Enter project name:" 8 50 2> $TMP_PROJECT_NAME
 
 return_drupal_name=$?
-drupal_name=`cat tempdrupalname.$$`
+drupal_name=`cat $TMP_PROJECT_NAME`
 case $return_drupal_name in
         0)
         projectname="$drupal_name";
-        rm -f tempdrupalname.$$ ;;
+        rm -f $TMP_PROJECT_NAME ;;
         1)
         echo "Cancel pressed.";
-        rm -f tempdrupalname.$$ ;;
+        rm -f $TMP_PROJECT_NAME ;;
 esac
 
 sufix=$projectname
 DEV_ENVIROMENT=$prefix_drupal$sufix
 DEV_ENVIROMENT_WEB=$DEV_ENVIROMENT$appendweb
+
+echo "########################################################################
+########################################################################" >> $LOG_FILE
+echo Initialize log >> $LOG_FILE
+date >> $LOG_FILE
+echo "" >> $LOG_FILE
+echo "Moving to WEB location...." >> $LOG_FILE
+echo "" >> $LOG_FILE
+
 cd $WEB_PATH
 mkdir "$DEV_ENVIROMENT_WEB"
 cd $DEV_ENVIROMENT_WEB
 
-git init
-git add .
-git commit
+	git init >> $LOG_FILE
+	git add . >> $LOG_FILE
+	git commit >> $LOG_FILE
+
+echo "" >> $LOG_FILE
+echo "Moving to REPO location...." >> $LOG_FILE
+echo "" >> $LOG_FILE
 
 cd $REPO_PATH
 mkdir $prefix_drupal$projectname
 
 cd $prefix_drupal$projectname
-git --bare init
+	git --bare init >> $LOG_FILE
 
 #		go back to web location... go inside project folder and finnish with git
+echo "" >> $LOG_FILE
+echo "Moving to WEB location...." >> $LOG_FILE
+echo "" >> $LOG_FILE
+
 cd $WEB_PATH
 cd $DEV_ENVIROMENT_WEB
 
-echo "  ########################################################################
-        ########################################################################" >> $LOG_FILE
-echo Initialize log >> $LOG_FILE
-date >> $LOG_FILE
-git --bare init >> $LOG_FILE
-git add . >> $LOG_FILE
-git commit -m "Initial commit" >> $LOG_FILE
-git push $REPO_PATH$DEV_ENVIROMENT master >> $LOG_FILE
-
-dialog --title "Progress log..." \
-       --tailboxbg $LOG_FILE 8 58
+	git --bare init >> $LOG_FILE
+	git add . >> $LOG_FILE
+	git commit -m "Initial commit" >> $LOG_FILE
+	git push $REPO_PATH$DEV_ENVIROMENT master >> $LOG_FILE
 
 #       Setup hooks for syncronisation
 #       We need to make sure that the .hub. repository is configured as a remote for the live repository.
