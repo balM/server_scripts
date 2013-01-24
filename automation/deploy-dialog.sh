@@ -155,12 +155,26 @@ cp .gitignore $WEB_PATH$DEV_ENV_WEB >> $LOG_FILE #      small file , no need for
 (cp -R $DRUPAL_ASSETS_DIR $WEB_PATH$DEV_ENV_WEB | pv -n -s -f 'du -sb . | awk'{print $1}'') 2>&1 | dialog --gauge 'Importing assets...' 7 70
 (cp -R $DRUPAL_WWW_DIR $WEB_PATH$DEV_ENV_WEB | pv -n -s -f 'du -sb . | awk'{print $1}'') 2>&1 | dialog --gauge 'Importing core...' 7 70
 
+
+#       now we have the www folder for the Drupal core in place.
+#       define the roor folder for web
+        WEB_ROOT_DRUPAL="www"
+        #go to the right location
+        cd $WEB_ROOT_DRUPAL
+        #the default .htaccess file
+        cp sample.htaccess .htaccess
+
+#       PUSH
+        cd $WEB_PATH$DEV_ENV_WEB
+        git add . >> $LOG_FILE
+        git commit -m "Core and assets" >> $LOG_FILE
+        git push hub master >> $LOG_FILE
+
 ##      all done!
 echo "#########################################################################
 ###  New project created.
 ###  Please check the WIKI page for the URL
 #########################################################################" >> $LOG_FILE
-
 
 dialog --title "Progress log..." \
        --tailbox $LOG_FILE 50 100
