@@ -29,13 +29,14 @@ which pv &> /dev/null
 [ $? -ne 0 ]  && echo "pv (pv utility is not available, Install it." && exit 1
 
 #       Prepare LOG ENV
-cd /var/log && mkdir projects
+declare -r LOG_DIR="/var/log/projects"
+if [ ! -d "$LOG_DIR" ]; then mkdir $LOG_DIR; fi
 
 #define global PATH - make sure that the ones that won't change are read-only
 # IMPORTANT !!!
 #change this on the DEV SERVER with the correct one
 declare -r BACKTITLE="TAG: Deploy new project. Part of the automation process."
-declare LOG_FILE="/var/log/projects/deployment.log"
+declare LOG_FILE="$LOG_DIR/deployment.log"
 declare TMP_FILE="$(mktemp /tmp/deploy.XXXXX)"  # always use `mktemp`
 declare TMP_PROJECT_NAME="$(mktemp /tmp/project_name.XXXXX)"
 declare -r README="/home/andy/cores/readme"
