@@ -28,11 +28,14 @@ which pv &> /dev/null
 
 [ $? -ne 0 ]  && echo "pv (pv utility is not available, Install it." && exit 1
 
+#       Prepare LOG ENV
+cd /var/log && mkdir projects
+
 #define global PATH - make sure that the ones that won't change are read-only
 # IMPORTANT !!!
 #change this on the DEV SERVER with the correct one
 declare -r BACKTITLE="TAG: Deploy new project. Part of the automation process."
-declare LOG_FILE="/var/log/deployment.log"
+declare LOG_FILE="/var/log/projects/deployment.log"
 declare TMP_FILE="$(mktemp /tmp/deploy.XXXXX)"  # always use `mktemp`
 declare TMP_PROJECT_NAME="$(mktemp /tmp/project_name.XXXXX)"
 declare -r README="/home/andy/cores/readme"
@@ -190,10 +193,10 @@ echo "#########################################################################
 dialog --title "Progress log..." \
        --tailbox $LOG_FILE 50 100
 
-#setup hooks for syncronisation
-#We need to make sure that the .hub. repository is configured as a remote for the live repository.
-# we are in the correct location?
-#
+#       rename $LOG_FILE
+#       ugly
+delimiter="_"
+mv $LOG_FILE $LOG_FILE$delimiter$prefix_drupal$sufix
 
 }
 ##############################################################################
