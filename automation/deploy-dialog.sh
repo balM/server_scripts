@@ -164,52 +164,12 @@ chmod +x hooks/post-update
 cd $DRUPAL_CORE
 
 ##############################################################################################################
-DIRS=($DRUPAL_WWW_DIR $DRUPAL_ASSETS_DIR)
-DEST=$WEB_PATH$DEV_ENV_WEB
 
-dialog --title "Progress..." --gauge "Importing assets and core ..." 10 75 < <(
- # Get total number of files in array
-        cd $DRUPAL_ASSETS_DIR
-        total_assets=`find . -type f | wc -l`
-        cd ..
-        cd $DRUPAL_WWW_DIR
-        total_www=`find . -type f | wc -l`
-        cd ..
-        n=$(($total_assets + $total_www))
-   #n=${#DIRS[*]};
+(pv -n core.tar.gz | tar xzf - -C $WEB_PATH$DEV_ENV_WEB ) \
+2>&1 | dialog --gauge "Extracting core and assets..." 6 50
 
-   # set counter - it will increase every-time a file is copied to $DEST
-   i=0
-
-   #
-   # Start the for loop
-   #
-   for f in "${DIRS[@]}"
-   do
-      # calculate progress
-      PCT=$(( 100*(++i)/n ))
-      # update dialog box
-cat <<EOF
-XXX
-$PCT
-Copying $f...
-XXX
-EOF
-  #     copy file $f to $DEST
-  cp -R $f ${DEST/${DIRS[@]}} &>/dev/null
-   done
-)
-
-
-
-#cp .gitignore $WEB_PATH$DEV_ENV_WEB >> $LOG_FILE #      small file , no need for a gauge
-
-#       find out the size of each folder that we need to relocate. Start with "assets"
-#       display gauge during the copy
-#       it may be so fast that it does nor actually manage to display the gauge :)
-#(cp -R $DRUPAL_ASSETS_DIR $WEB_PATH$DEV_ENV_WEB | pv -n -s -f 'du -sb . | awk'{print $1}'') 2>&1 | dialog --gauge 'Importing assets...' 7 70
-#(cp -R $DRUPAL_WWW_DIR $WEB_PATH$DEV_ENV_WEB | pv -n -s -f 'du -sb . | awk'{print $1}'') 2>&1 | dialog --gauge 'Importing core...' 7 70
-
+cp .gitignore $WEB_PATH$DEV_ENV_WEB >> $LOG_FILE #     small file , no need for a gauge
+##############################################################################################################
 
 #       now we have the www folder for the Drupal core in place.
 #       define the roor folder for web
