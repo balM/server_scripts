@@ -39,6 +39,8 @@ declare -r BACKTITLE="TAG: Deploy new project. Part of the automation process."
 declare LOG_FILE="$LOG_DIR/deployment.log"
 declare TMP_FILE="$(mktemp /tmp/deploy.XXXXX)"  # always use `mktemp`
 declare TMP_PROJECT_NAME="$(mktemp /tmp/project_name.XXXXX)"
+declare TMP_MYSQL_USERNAME="$(mktemp /tmp/mysql_username.XXXXX)"
+declare TMP_MYSQL_PASSWORD="$(mktemp /tmp/mysql_password.XXXXX)"
 declare -r README="/home/andy/cores/readme"
 declare DRUPAL_CORE="/home/andy/cores/drupal/"
 declare -r DRUPAL_ASSETS_DIR="assets"
@@ -184,6 +186,45 @@ cp .gitignore $WEB_PATH$DEV_ENV_WEB >> $LOG_FILE #     small file , no need for 
         git add . >> $LOG_FILE
         git commit -m "Core and assets" >> $LOG_FILE
         git push hub master >> $LOG_FILE
+
+#       we have by now the core and the assets in the right place...
+#       let's start dealing with MySQL
+#       we need to create a DB named drupal_$projectname_dev (for DEV environment)
+#       the SQL script is already in /assets/database-backups/$SQL_script
+
+dialog --title "Drupal Project - DB Setup" \
+--backtitle "$BACKTITLE" \
+--inputbox "Enter MySQL username:" 10 50 2> $TMP_MYSQL_USERNAME
+
+return_mysql_username=$?
+mysql_username=`cat $TMP_MYSQL_USERNAME`
+case $return_mysql_username in
+        0)
+        mysql_user="$mysql_username";
+        rm -f $TMP_MYSQL_USERNAME ;;
+        1)
+        echo "Cancel pressed.Abort.";
+        rm -f $TMP_MYSQL_USERNAME ;;
+esac
+
+dialog --title "Drupal Project - DB Setup" \
+--backtitle "$BACKTITLE" \
+--passwordbox "Enter MySQL password for the username $mysql_user:\n
+        The input WILL NOT be displayed, but WILL be recorded." 15 50 2> $TMP_MYSQL_PASSWORD
+
+return_mysql_pass=$?
+mysql_pass=`cat $TMP_MYSQL_PASSWORD`
+case $return_mysql_pass in
+        0)
+        mysql_pass="$mysql_pass";
+        rm -f $TMP_MYSQL_PASSWORD ;;
+        1)
+        echo "Cancel pressed.Abort.";
+        rm -f $TMP_MYSQL_PASSWORD ;;
+esac
+
+#       run the SQL script
+
 
 ##      all done!
 echo "#########################################################################
