@@ -224,6 +224,19 @@ case $return_mysql_pass in
 esac
 
 #       run the SQL script
+FILE=`dialog --stdout --title "Please choose a file" --fselect $WEB_PATH$DEV_ENV_WEB/assets/database-backups/ 14 48`
+
+case $? in
+        0)
+                echo "\"$FILE\" chosen >> $LOG_FILE";;
+        1)
+                echo "Cancel pressed.";;
+        255)
+                echo "Box closed.";;
+esac
+
+mysql --user=$mysql_username --password=$mysql_pass -e "create database $drupal_name"
+mysql --user $mysql_username --password $mysql_pass $drupal_name < $FILE
 
 
 ##      all done!
