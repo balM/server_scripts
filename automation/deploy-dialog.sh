@@ -39,6 +39,8 @@ declare -r BACKTITLE="TAG: Deploy new project. Part of the automation process."
 declare LOG_FILE="$LOG_DIR/deployment.log"
 declare TMP_FILE="$(mktemp /tmp/deploy.XXXXX)"  # always use `mktemp`
 declare TMP_PROJECT_NAME="$(mktemp /tmp/project_name.XXXXX)"
+declare TMP_MYSQL_USERNAME="$(mktemp /tmp/mysql_username.XXXXX)"
+declare TMP_MYSQL_PASSWORD="$(mktemp /tmp/mysql_password.XXXXX)"
 declare -r README="/home/andy/cores/readme"
 declare DRUPAL_CORE="/home/andy/cores/drupal/"
 declare -r DRUPAL_ASSETS_DIR="assets"
@@ -49,6 +51,7 @@ declare WEB_PATH="/var/www/vhost/devel_sites/"
 declare -r prefix_drupal="genesis_"
 declare -r prefix_ci="firestarter_"
 declare -r appendweb="_web"
+declare -r db_env="_dev"
 
 # pipe a command to a tailbox dialog
 # here we can specify the parameters the function expects
@@ -86,8 +89,8 @@ case $return_drupal_name in
 esac
 
 sufix=$projectname
-DEV_ENVIROMENT=$prefix_drupal$sufix
-DEV_ENVIROMENT_WEB=$DEV_ENVIROMENT$appendweb
+DEV_ENV=$prefix_drupal$sufix
+DEV_ENV_WEB=$DEV_ENV$appendweb
 
 echo "########################################################################
 ########################################################################" >> $LOG_FILE
@@ -98,8 +101,8 @@ echo "Moving to WEB location...." >> $LOG_FILE
 echo "" >> $LOG_FILE
 
 cd $WEB_PATH
-mkdir "$DEV_ENVIROMENT_WEB"
-cd $DEV_ENVIROMENT_WEB
+mkdir "$DEV_ENV_WEB"
+cd $DEV_ENV_WEB
 
 	git init >> $LOG_FILE
 	git add . >> $LOG_FILE
@@ -121,12 +124,12 @@ echo "Moving to WEB location...." >> $LOG_FILE
 echo "" >> $LOG_FILE
 
 cd $WEB_PATH
-cd $DEV_ENVIROMENT_WEB
+cd $DEV_ENV_WEB
 
 	git --bare init >> $LOG_FILE
 	git add . >> $LOG_FILE
 	git commit -m "Initial commit" >> $LOG_FILE
-	git push $REPO_PATH$DEV_ENVIROMENT master >> $LOG_FILE
+	git push $REPO_PATH$DEV_ENV master >> $LOG_FILE
 
 #       Setup hooks for syncronisation
 #       We need to make sure that the .hub. repository is configured as a remote for the live repository.
@@ -162,14 +165,14 @@ chmod +x hooks/post-update
 
 #       start the core relocation
 cd $DRUPAL_CORE
-cp .gitignore $WEB_PATH$DEV_ENV_WEB >> $LOG_FILE #      small file , no need for a gauge
 
-#       find out the size of each folder that we need to relocate. Start with "assets"
-#       display gauge during the copy
-#       it may be so fast that it does nor actually manage to display the gauge :)
-(cp -R $DRUPAL_ASSETS_DIR $WEB_PATH$DEV_ENV_WEB | pv -n -s -f 'du -sb . | awk'{print $1}'') 2>&1 | dialog --gauge 'Importing assets...' 7 70
-(cp -R $DRUPAL_WWW_DIR $WEB_PATH$DEV_ENV_WEB | pv -n -s -f 'du -sb . | awk'{print $1}'') 2>&1 | dialog --gauge 'Importing core...' 7 70
+##############################################################################################################
 
+(pv -n core.tar.gz | tar xzf - -C $WEB_PATH$DEV_ENV_WEB ) \
+2>&1 | dialog --gauge "Extracting core and assets..." 6 50
+
+cp .gitignore $WEB_PATH$DEV_ENV_WEB >> $LOG_FILE #     small file , no need for a gauge
+##############################################################################################################
 
 #       now we have the www folder for the Drupal core in place.
 #       define the roor folder for web
@@ -179,11 +182,66 @@ cp .gitignore $WEB_PATH$DEV_ENV_WEB >> $LOG_FILE #      small file , no need for
         #the default .htaccess file
         cp sample.htaccess .htaccess
 
+#       This will take some time to complete. Put an infoxox that will infor the user taht we are working
+#       we are running
 #       PUSH
         cd $WEB_PATH$DEV_ENV_WEB
-        git add . >> $LOG_FILE
-        git commit -m "Core and assets" >> $LOG_FILE
-        git push hub master >> $LOG_FILE
+        (git add .) | dialog --infobox "GIT: Staging new files ... Please wait" 5 70
+        (git commit -m "Core and assets") | dialog --infobox "GIT: performing initial commit ... Please wait" 5 70
+        (git push hub master) | dialog --infobox "GIT: updating master ... Please wait" 5 70
+
+
+#       we have by now the core and the assets in the right place...
+#       let's start dealing with MySQL
+#       we need to create a DB named drupal_$projectname_dev (for DEV environment)
+#       the SQL script is already in /assets/database-backups/$SQL_script
+
+dialog --title "Drupal Project - DB Setup" \
+--backtitle "$BACKTITLE" \
+--inputbox "Enter MySQL username:" 10 50 2> $TMP_MYSQL_USERNAME
+
+return_mysql_username=$?
+mysql_username=`cat $TMP_MYSQL_USERNAME`
+case $return_mysql_username in
+        0)
+        mysql_user="$mysql_username";
+        rm -f $TMP_MYSQL_USERNAME ;;
+        1)
+        echo "Cancel pressed.Abort.";
+        rm -f $TMP_MYSQL_USERNAME ;;
+esac
+
+dialog --title "Drupal Project - DB Setup" \
+--backtitle "$BACKTITLE" \
+--passwordbox "Enter MySQL password for the username $mysql_user:\n
+        The input WILL NOT be displayed, but WILL be recorded." 15 50 2> $TMP_MYSQL_PASSWORD
+
+return_mysql_pass=$?
+mysql_pass=`cat $TMP_MYSQL_PASSWORD`
+case $return_mysql_pass in
+        0)
+        mysql_pass="$mysql_pass";
+        rm -f $TMP_MYSQL_PASSWORD ;;
+        1)
+        echo "Cancel pressed.Abort.";
+        rm -f $TMP_MYSQL_PASSWORD ;;
+esac
+
+#       run the SQL script
+FILE=`dialog --stdout --title "Please choose a file" --fselect $WEB_PATH$DEV_ENV_WEB/assets/database-backups/ 14 48`
+
+case $? in
+        0)
+                echo "\"$FILE\" chosen >> $LOG_FILE";;
+        1)
+                echo "Cancel pressed.";;
+        255)
+                echo "Box closed.";;
+esac
+
+mysql --user=$mysql_username --password=$mysql_pass -e "create database $prefix_drupal$drupal_name$db_env"
+mysql --user $mysql_username --password $mysql_pass $drupal_name < "$FILE"
+
 
 ##      all done!
 echo "#########################################################################
