@@ -88,8 +88,8 @@ case $return_drupal_name in
 esac
 
 sufix=$projectname
-DEV_ENVIROMENT=$prefix_drupal$sufix
-DEV_ENVIROMENT_WEB=$DEV_ENVIROMENT$appendweb
+DEV_ENV=$prefix_drupal$sufix
+DEV_ENV_WEB=$DEV_ENV$appendweb
 
 echo "########################################################################
 ########################################################################" >> $LOG_FILE
@@ -100,8 +100,8 @@ echo "Moving to WEB location...." >> $LOG_FILE
 echo "" >> $LOG_FILE
 
 cd $WEB_PATH
-mkdir "$DEV_ENVIROMENT_WEB"
-cd $DEV_ENVIROMENT_WEB
+mkdir "$DEV_ENV_WEB"
+cd $DEV_ENV_WEB
 
 	git init >> $LOG_FILE
 	git add . >> $LOG_FILE
@@ -123,12 +123,12 @@ echo "Moving to WEB location...." >> $LOG_FILE
 echo "" >> $LOG_FILE
 
 cd $WEB_PATH
-cd $DEV_ENVIROMENT_WEB
+cd $DEV_ENV_WEB
 
 	git --bare init >> $LOG_FILE
 	git add . >> $LOG_FILE
 	git commit -m "Initial commit" >> $LOG_FILE
-	git push $REPO_PATH$DEV_ENVIROMENT master >> $LOG_FILE
+	git push $REPO_PATH$DEV_ENV master >> $LOG_FILE
 
 #       Setup hooks for syncronisation
 #       We need to make sure that the .hub. repository is configured as a remote for the live repository.
