@@ -51,6 +51,7 @@ declare WEB_PATH="/var/www/vhost/devel_sites/"
 declare -r prefix_drupal="genesis_"
 declare -r prefix_ci="firestarter_"
 declare -r appendweb="_web"
+declare -r db_env="_dev"
 
 # pipe a command to a tailbox dialog
 # here we can specify the parameters the function expects
@@ -181,11 +182,14 @@ cp .gitignore $WEB_PATH$DEV_ENV_WEB >> $LOG_FILE #     small file , no need for 
         #the default .htaccess file
         cp sample.htaccess .htaccess
 
+#       This will take some time to complete. Put an infoxox that will infor the user taht we are working
+#       we are running
 #       PUSH
         cd $WEB_PATH$DEV_ENV_WEB
-        git add . >> $LOG_FILE
-        git commit -m "Core and assets" >> $LOG_FILE
-        git push hub master >> $LOG_FILE
+        (git add .) | dialog --infobox "GIT: Staging new files ... Please wait" 5 70
+        (git commit -m "Core and assets") | dialog --infobox "GIT: performing initial commit ... Please wait" 5 70
+        (git push hub master) | dialog --infobox "GIT: updating master ... Please wait" 5 70
+
 
 #       we have by now the core and the assets in the right place...
 #       let's start dealing with MySQL
@@ -235,8 +239,8 @@ case $? in
                 echo "Box closed.";;
 esac
 
-mysql --user=$mysql_username --password=$mysql_pass -e "create database $drupal_name"
-mysql --user $mysql_username --password $mysql_pass $drupal_name < $FILE
+mysql --user=$mysql_username --password=$mysql_pass -e "create database $prefix_drupal$drupal_name$db_env"
+mysql --user $mysql_username --password $mysql_pass $drupal_name < "$FILE"
 
 
 ##      all done!
