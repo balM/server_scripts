@@ -232,15 +232,12 @@ FILE=`dialog --stdout --title "Please choose a file" --fselect $WEB_PATH$DEV_ENV
 
 case $? in
         0)
-                echo "\"$FILE\" chosen >> $LOG_FILE";;
+                echo "\"$FILE\" chosen" >> $LOG_FILE
+                mysql --user=$mysql_username --password=$mysql_pass -e "create database $prefix_drupal$drupal_name$db_env"
+                mysql --user=$mysql_username --password=$mysql_pass $prefix_drupal$drupal_name$db_env < $FILE ;;
         1)
                 echo "Cancel pressed.";;
-        255)
-                echo "Box closed.";;
 esac
-
-mysql --user=$mysql_username --password=$mysql_pass -e "create database $prefix_drupal$drupal_name$db_env"
-mysql --user $mysql_username --password $mysql_pass $drupal_name < "$FILE"
 
 
 ##      all done!
