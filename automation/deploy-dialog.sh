@@ -144,6 +144,13 @@ cd $DEV_ENV_WEB
 
 cd $REPO_PATH
 cd $DEV_ENV
+
+#       modify description file. This info's will be diaplayed if gitweb is setup on the server.
+
+cat > description <<EOF
+$projectname - Drupal build - DEV
+EOF
+
 touch hooks/post-update
 #       start to write
 cat > hooks/post-update <<EOF
