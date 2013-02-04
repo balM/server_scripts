@@ -235,7 +235,7 @@ case $return_mysql_pass in
 esac
 
 #       run the SQL script
-FILE=`dialog --stdout --title "Please choose a file" --fselect $WEB_PATH$DEV_ENV_WEB/assets/database-backups/ 14 48`
+FILE=`dialog --stdout --title "Please choose a file" --fselect $WEB_PATH$DEV_ENV_WEB/assets/database-backups/ 10 100`
 
 case $? in
         0)
