@@ -144,6 +144,13 @@ cd $DEV_ENV_WEB
 
 cd $REPO_PATH
 cd $DEV_ENV
+
+#       modify description file. This info's will be diaplayed if gitweb is setup on the server.
+
+cat > description <<EOF
+$projectname - Drupal build - DEV
+EOF
+
 touch hooks/post-update
 #       start to write
 cat > hooks/post-update <<EOF
@@ -232,15 +239,12 @@ FILE=`dialog --stdout --title "Please choose a file" --fselect $WEB_PATH$DEV_ENV
 
 case $? in
         0)
-                echo "\"$FILE\" chosen >> $LOG_FILE";;
+                echo "\"$FILE\" chosen" >> $LOG_FILE
+                mysql --user=$mysql_username --password=$mysql_pass -e "create database $prefix_drupal$drupal_name$db_env"
+                (mysql --user=$mysql_username --password=$mysql_pass $prefix_drupal$drupal_name$db_env < $FILE) | dialog --infobox "MySQL: Running .sql script... Please wait." 5 70 ;;
         1)
                 echo "Cancel pressed.";;
-        255)
-                echo "Box closed.";;
 esac
-
-mysql --user=$mysql_username --password=$mysql_pass -e "create database $prefix_drupal$drupal_name$db_env"
-mysql --user $mysql_username --password $mysql_pass $drupal_name < "$FILE"
 
 
 ##      all done!
