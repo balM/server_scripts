@@ -234,7 +234,7 @@ case $? in
         0)
                 echo "\"$FILE\" chosen" >> $LOG_FILE
                 mysql --user=$mysql_username --password=$mysql_pass -e "create database $prefix_drupal$drupal_name$db_env"
-                mysql --user=$mysql_username --password=$mysql_pass $prefix_drupal$drupal_name$db_env < $FILE ;;
+                (mysql --user=$mysql_username --password=$mysql_pass $prefix_drupal$drupal_name$db_env < $FILE) | dialog --infobox "MySQL: Running .sql script... Please wait." 5 70 ;;
         1)
                 echo "Cancel pressed.";;
 esac
