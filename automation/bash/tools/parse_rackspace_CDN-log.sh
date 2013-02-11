@@ -39,9 +39,12 @@ which pv &> /dev/null
 #	GLOBALS
 shopt -s globstar
 _now=$(date +"%Y_%m_%d_%T")     #       display DATE -> year-month-day-hour-minute-seconds
+declare -r BACKTITLE="TAG: CDN Log Parser"
 declare -r CDN_folder="/home/andy/CDN_logs"
 declare log_file="/home/andy/test_deployment/CDN-total_$_now"   #       save LOG FILE and append current timestamp
 declare TMP_FILE="$(mktemp /tmp/cdn_parser.XXXXX)"  # always use `mktemp`
+declare TMP_START_DATE="$(mktemp /tmp/start_date.XXXXX)"
+declare TMP_END_DATE="$(mktemp /tmp/end_date.XXXXX)"
 
 ######################################################################################################
 # Show a progress bar
@@ -86,7 +89,24 @@ cat $log_file | grep -o "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}"
 # we will use this. For debug purpuse, take 5 seconds break for now....
 sleep 5		
 }
+######################################################################################################
+interval_log(){
 
+#       we need to gibe the option of selecting 2 dates
+#       1st date - begin LOG
+#       2nd date - end LOG
+start_date=$(dialog --stdout --calendar "Start date:" 0 0 > $TMP_START_DATE)
+return_start_date=$?
+start_from=`cat $TMP_START_DATE`
+
+case $return_start_date in
+        0) echo "You have entered: $start_from"   ;;
+        1) clear; rm -f $TMP_START_DATE; echo "Cancel pressed. Aborting..."; exit 0  ;;
+esac
+
+end_date=$(dialog --stdout --calendar "End date:" 0 0)
+
+}
 ##############################################################################
 main() {
 while :
