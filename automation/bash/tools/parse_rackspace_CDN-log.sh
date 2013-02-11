@@ -41,10 +41,12 @@ shopt -s globstar
 _now=$(date +"%Y_%m_%d_%T")     #       display DATE -> year-month-day-hour-minute-seconds
 declare -r CDN_folder="/home/andy/CDN_logs"
 declare log_file="/home/andy/test_deployment/CDN-total_$_now"   #       save LOG FILE and append current timestamp
+declare TMP_FILE="$(mktemp /tmp/cdn_parser.XXXXX)"  # always use `mktemp`
 
 ######################################################################################################
 # Show a progress bar
 ######################################################################################################
+global_log(){
 dialog --title "Generating global LOG FILE" --gauge "Parsing file..." 10 100 < <(
    # Get total number of files in array
    count=`find $CDN_folder -name "*.gz" -print | wc -l`
@@ -72,3 +74,42 @@ EOF
    zcat $file >> $log_file
    done
 )
+#       We have the GLOBAL_LOG_FILE generated.
+#       Start to parse the content
+
+#       get the total number of line in file; this = total visits
+total_visits=`wc -l < $log_file`
+
+#       get the IP - grouped and sorted; first output the IP with the most visits
+cat $log_file | grep -o "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | sort -n | uniq -c | sort -n -r
+
+# we will use this. For debug purpuse, take 5 seconds break for now....
+sleep 5		
+}
+
+##############################################################################
+main() {
+while :
+do
+        dialog --clear --backtitle "$BACKTITLE" --title "Main Menu" \
+--menu "Use [UP/DOWN] key to move.Please choose an option:" 15 55 10 \
+1 "Generate GLOBAL LOG file" \
+2 "Specify a interval for LOG file" \
+3 "README" \
+4 "Exit" 2> $TMP_FILE
+
+    returned_opt=$?
+    choice=`cat $TMP_FILE`
+
+    case $returned_opt in
+           0) case $choice in
+                  1)  global_log ;;
+                  2)  interval_log ;;
+                  3)  show_readme  ;;
+                  4)  clear; rm -f $TMP_FILE; exit 0;;
+              esac ;;
+          *)clear ; rm -f $TMP_FILE; exit ;;
+    esac
+done
+}
+main "$@"
