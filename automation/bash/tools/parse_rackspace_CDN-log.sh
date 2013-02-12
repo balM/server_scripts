@@ -99,7 +99,7 @@ interval_log(){
 #       Just jump to functions
 pick_start
 pick_stop
-
+test_interval $start_day $stop_day $start_month $stop_month $start_year $stop_year
 }
 ##############################################################################
 #       Display calendar to allow user to pick the start date
@@ -124,17 +124,50 @@ return_end_date=$?
 end_at=`cat $TMP_END_DATE`
 
 case $return_end_date in
-        0) set_end ;;
+        0) set_stop  ;;
         1) clear; clean_up; echo "Cancel pressed. Aborting..."; exit 0  ;;
 esac
 }
 ##############################################################################
 set_start(){
-values=( ${start_from//[:\/]/ } )
-echo "${values[0]}" >> day
-echo "${values[1]}" >> day
-echo "${values[2]}" >> day
+start_values=( ${start_from//[:\/]/ } )
+start_day=${start_values[0]}
+start_month=${start_values[1]}
+start_year=${start_values[2]}
+#echo "$start_day" >> day
+#echo "$start_month" >> day
+#echo "$start_year" >> day
 }
+##############################################################################
+set_stop(){
+end_values=( ${end_at//[:\/]/ } )
+stop_day=${end_values[0]}
+stop_month=${end_values[1]}
+stop_year=${end_values[2]}
+#echo "$start_day" >> day
+#echo "$start_month" >> day
+#echo "$start_year" >> day
+}
+##############################################################################
+test_interval(){
+if [ "$2" -ge "$1" ]; then
+#       at least the stop_year >= start_year
+#       we need ONLY the log files that are genetated for the interval specified
+#       As we already have all the informations that we required, this should be easy
+touch --date "$start_year-$start_month-$start_day" /tmp/start
+touch --date "$stop_year-$stop_month-$stop_day" /tmp/stop
+#       save the log files into a plain file.
+find $CDN_folder -type f -newer /tmp/start -not -newer /tmp/stop >> list_logs
+
+else
+#       we are in the wrong place
+        clear
+        clean_up
+        echo "Wrong time interval...Abort!"
+        exit 0
+fi
+}
+
 ##############################################################################
 main() {
 while :
