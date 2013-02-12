@@ -38,6 +38,7 @@ which pv &> /dev/null
 ######################################################################################################
 #	GLOBALS
 shopt -s globstar
+SEQ=/usr/bin/seq
 _now=$(date +"%Y_%m_%d_%T")     #       display DATE -> year-month-day-hour-minute-seconds
 declare -r BACKTITLE="TAG: CDN Log Parser"
 declare -r CDN_folder="/home/andy/CDN_logs"
@@ -157,7 +158,47 @@ if [ "$2" -ge "$1" ]; then
 touch --date "$start_year-$start_month-$start_day" /tmp/start
 touch --date "$stop_year-$stop_month-$stop_day" /tmp/stop
 #       save the log files into a plain file.
+#       make sure that we write to a new file
+        if [ -f list_logs ]; then
+                rm -f list_logs
+        fi
+        if [ -f minilog ]; then
+                rm -f minilog
+        fi
+
 find $CDN_folder -type f -newer /tmp/start -not -newer /tmp/stop >> list_logs
+#       let's generate a "mini-global" log file that will contain just the logs found
+#       we will disply a prograss bar durring the whole process
+#       after the log is generated, parse it
+time1="$start_year-$start_month-$start_day"
+time2="$stop_year-$stop_month-$stop_day"
+dialog --title "Generating LOG FILE for the interval $time1 -> $time2" --gauge "Parsing file..." 10 100 < <(
+
+#       first, how many files we need to compile?
+
+log_files=`wc -l list_logs | cut -f1 -d' '`
+interval_log=( $( cat list_logs ) )
+counter=0
+
+for i in $($SEQ 0 $((${#interval_log[@]} - 1)))
+do
+# calculate progress
+      PCT=$(( 100*(++counter)/$log_files ))
+
+      # update dialog box
+cat <<EOF
+XXX
+$PCT
+Parsing file "${interval_log[$i]}"...
+XXX
+EOF
+        #zcat
+         zcat ${interval_log[$i]} >> minilog
+done
+)
+#       clean the tmp files
+rm -f /tmp/start
+rm -f /tmp/stop
 
 else
 #       we are in the wrong place
@@ -167,6 +208,7 @@ else
         exit 0
 fi
 }
+
 
 ##############################################################################
 main() {
