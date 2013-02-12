@@ -95,17 +95,45 @@ interval_log(){
 #       we need to gibe the option of selecting 2 dates
 #       1st date - begin LOG
 #       2nd date - end LOG
+
+#       Just jump to functions
+pick_start
+pick_stop
+
+}
+##############################################################################
+#       Display calendar to allow user to pick the start date
+#       Once the date is picked, jump to set_start()
+#       If CANCEL is pressed...bad luck... ABORT
+pick_start(){
 start_date=$(dialog --stdout --calendar "Start date:" 0 0 > $TMP_START_DATE)
 return_start_date=$?
 start_from=`cat $TMP_START_DATE`
-
 case $return_start_date in
-        0) echo "You have entered: $start_from"   ;;
-        1) clear; rm -f $TMP_START_DATE; echo "Cancel pressed. Aborting..."; exit 0  ;;
+        0) set_start ;;
+        1) clear; clean_up; echo "Cancel pressed. Aborting..."; exit 0  ;;
 esac
+}
+##############################################################################
+#       Display calendar to allow user to pick the end date
+#       Once the date is picked, jump to set_end()
+#       If CANCEL is pressed...bad luck... ABORT
+pick_stop(){
+end_date=$(dialog --stdout --calendar "End date:" 0 0 > $TMP_END_DATE)
+return_end_date=$?
+end_at=`cat $TMP_END_DATE`
 
-end_date=$(dialog --stdout --calendar "End date:" 0 0)
-
+case $return_end_date in
+        0) set_end ;;
+        1) clear; clean_up; echo "Cancel pressed. Aborting..."; exit 0  ;;
+esac
+}
+##############################################################################
+set_start(){
+values=( ${start_from//[:\/]/ } )
+echo "${values[0]}" >> day
+echo "${values[1]}" >> day
+echo "${values[2]}" >> day
 }
 ##############################################################################
 main() {
