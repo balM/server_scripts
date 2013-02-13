@@ -37,6 +37,9 @@ which pv &> /dev/null
 [ $? -ne 0 ]  && echo "pv (pv utility is not available, Install it." && exit 1
 ######################################################################################################
 #	GLOBALS
+SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+SCRIPT_DIR="$( cd -P "$( dirname "$SCRIPT_SOURCE" )" && pwd )"
+SCRIPT_NAME="${0##*/}"
 shopt -s globstar
 SEQ=/usr/bin/seq
 _now=$(date +"%Y_%m_%d_%T")     #       display DATE -> year-month-day-hour-minute-seconds
@@ -46,11 +49,52 @@ declare log_file="/home/andy/test_deployment/CDN-total_$_now"   #       save LOG
 declare TMP_FILE="$(mktemp /tmp/cdn_parser.XXXXX)"  # always use `mktemp`
 declare TMP_START_DATE="$(mktemp /tmp/start_date.XXXXX)"
 declare TMP_END_DATE="$(mktemp /tmp/end_date.XXXXX)"
+declare TMP_CONTAINER="$(mktemp /tmp/container.XXXXX)"
 
 ######################################################################################################
-# Show a progress bar
+clean_up(){
+rm -f $TMP_FILE
+rm -f $TMP_START_DATE
+rm -f $TMP_END_DATE
+}
+######################################################################################################
+#       For what project are we parsing the log files?
+#       dialog ->menu   -> display a list of current containers
+select_container(){
+
+#       put all the containers into an array
+cd $CDN_folder
+containers=(*)
+MENU_OPT=
+count=0
+
+for (( prj = 0 ; prj < ${#containers[@]} ; prj++ ))
+        do
+                count=$[count+1]
+                MENU_OPT="${MENU_OPT} ${count} ${containers[$prj]}"
+done
+
+cmd=(dialog --menu "Select container:" 22 76 16)
+options=(${MENU_OPT})
+choice=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+
+#       at this stage, MENU_OPT contains:
+#       1 X 2 Y 3 Z ...
+#       where $choice=integer
+#       so, we know the integer, we need the NAME for that integer
+echo
+echo $choice
+echo
+
+#       return to original location
+cd $SCRIPT_DIR
+#       clean up
+clean_up
+}
 ######################################################################################################
 global_log(){
+
+#       show the output and the progress using gauge
 dialog --title "Generating global LOG FILE" --gauge "Parsing file..." 10 100 < <(
    # Get total number of files in array
    count=`find $CDN_folder -name "*.gz" -print | wc -l`
@@ -78,6 +122,7 @@ EOF
    zcat $file >> $log_file
    done
 )
+
 #       We have the GLOBAL_LOG_FILE generated.
 #       Start to parse the content
 
@@ -86,9 +131,7 @@ total_visits=`wc -l < $log_file`
 
 #       get the IP - grouped and sorted; first output the IP with the most visits
 cat $log_file | grep -o "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | sort -n | uniq -c | sort -n -r
-
-# we will use this. For debug purpuse, take 5 seconds break for now....
-sleep 5		
+sleep 5
 }
 ######################################################################################################
 interval_log(){
@@ -103,7 +146,8 @@ pick_stop
 test_interval $start_day $stop_day $start_month $stop_month $start_year $stop_year
 }
 ##############################################################################
-#       Display calendar to allow user to pick the start date
+##############################################################################
+#       Dsiplay calendar to allow user to pick the start date
 #       Once the date is picked, jump to set_start()
 #       If CANCEL is pressed...bad luck... ABORT
 pick_start(){
@@ -116,8 +160,8 @@ case $return_start_date in
 esac
 }
 ##############################################################################
-#       Display calendar to allow user to pick the end date
-#       Once the date is picked, jump to set_end()
+#       Dsiplay calendar to allow user to pick the end date
+#       Once the date is picked, jump to set_start()
 #       If CANCEL is pressed...bad luck... ABORT
 pick_stop(){
 end_date=$(dialog --stdout --calendar "End date:" 0 0 > $TMP_END_DATE)
@@ -135,9 +179,6 @@ start_values=( ${start_from//[:\/]/ } )
 start_day=${start_values[0]}
 start_month=${start_values[1]}
 start_year=${start_values[2]}
-#echo "$start_day" >> day
-#echo "$start_month" >> day
-#echo "$start_year" >> day
 }
 ##############################################################################
 set_stop(){
@@ -145,9 +186,6 @@ end_values=( ${end_at//[:\/]/ } )
 stop_day=${end_values[0]}
 stop_month=${end_values[1]}
 stop_year=${end_values[2]}
-#echo "$start_day" >> day
-#echo "$start_month" >> day
-#echo "$start_year" >> day
 }
 ##############################################################################
 test_interval(){
@@ -208,8 +246,6 @@ else
         exit 0
 fi
 }
-
-
 ##############################################################################
 main() {
 while :
@@ -218,8 +254,9 @@ do
 --menu "Use [UP/DOWN] key to move.Please choose an option:" 15 55 10 \
 1 "Generate GLOBAL LOG file" \
 2 "Specify a interval for LOG file" \
-3 "README" \
-4 "Exit" 2> $TMP_FILE
+3 "Select LOG container" \
+4 "README" \
+5 "Exit" 2> $TMP_FILE
 
     returned_opt=$?
     choice=`cat $TMP_FILE`
@@ -228,10 +265,11 @@ do
            0) case $choice in
                   1)  global_log ;;
                   2)  interval_log ;;
-                  3)  show_readme  ;;
-                  4)  clear; rm -f $TMP_FILE; exit 0;;
+                  3)  select_container ;;
+                  4)  show_readme  ;;
+                  5)  clear; clean_up; exit 0;;
               esac ;;
-          *)clear ; rm -f $TMP_FILE; exit ;;
+          *)clear; clean_up; exit 0;;
     esac
 done
 }
