@@ -54,12 +54,7 @@ declare -r prefix_ci="firestarter_"
 declare -r appendweb="_web"
 declare -r db_env="_dev"
 
-# pipe a command to a tailbox dialog
-# here we can specify the parameters the function expects
-# perhaps there are smarter ways that may integrate better
-# $1 - tailbox dialog height
-# $2 - title
-# $3 - command
+
 ##############################################################################
 #                      Define Functions Here                                 #
 ##############################################################################
