@@ -82,9 +82,11 @@ choice=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 #       1 X 2 Y 3 Z ...
 #       where $choice=integer
 #       so, we know the integer, we need the NAME for that integer
-echo
-echo $choice
-echo
+string=$MENU_OPT
+string_words=$(echo $string | wc -w)
+opt=$[choice*2]
+read -r -a word <<< "$string"
+container=${word[$opt-1]}
 
 #       return to original location
 cd $SCRIPT_DIR
