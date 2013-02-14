@@ -133,6 +133,23 @@ total_visits=`wc -l < $log_file`
 
 #       get the IP - grouped and sorted; first output the IP with the most visits
 cat $log_file | grep -o "[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}" | sort -n | uniq -c | sort -n -r
+
+#       Size of the object returned to the client
+#       The following assumes an Apache HTTP Server combined log format where each entry in the log file contains the following information:
+#       %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-agent}i"
+#       where:
+#       %h = IP address of the client (remote host) which made the request
+#       %l = RFC 1413 identity of the client
+#       %u = userid of the person requesting the document
+#       %t = Time that the server finished processing the request
+#       %r = Request line from the client in double quotes
+#       %>s = Status code that the server sends back to the client
+#       %b = Size of the object returned to the client
+#       Example:
+#       111.111.111.111 - - [31/Jul/2012:11:02:16 +0000] "GET /URL.rackcdn.com/filename HTTP/1.1" 200 67548 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_4) AppleWebKit/534.57.2 (KHTML, like Gecko) Version/5.1.7 Safari/534.57.2" "-"
+#       root@jail-1:/home/andy/test_deployment# awk '{print $10}' log_file ---> 67548
+#       we need to do this for each line in the file, add the numbers and convert the result to human format
+
 sleep 5
 }
 ######################################################################################################
