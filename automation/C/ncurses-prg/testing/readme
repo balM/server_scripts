@@ -1,0 +1,7 @@
+ncurses library needed;
+
+- to compile:
+	gcc filename.c - filename -lncurses
+
+some of the files will require -lpanel as well.
+
