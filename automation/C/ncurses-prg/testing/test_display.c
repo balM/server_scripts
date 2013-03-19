@@ -31,10 +31,10 @@ void screen_init(void) {
         refresh();
         wrefresh(main_window);
 
-        screen = newwin(6,174,1,1);
-        top_right_w = newwin(15,30,1,175);
-        bottom_right_w = newwin(40,30,16,175);
-        center_w = newwin(5,173,7,1);
+        screen = newwin(3,205,1,1);
+        top_right_w = newwin(15,30,4,176);
+        bottom_right_w = newwin(35,30,20,176);
+        center_w = newwin(5,173,4,1);
 
         box(screen, ACS_VLINE, ACS_HLINE);
         box(top_right_w, ACS_VLINE, ACS_HLINE);
@@ -47,18 +47,19 @@ void screen_init(void) {
 
 static void update_display(void) {
         curs_set(0);
+
         wattron(screen,COLOR_PAIR(2));
+        wattron(screen,A_BOLD);
         mvwprintw(screen,1,3,"NCURSES TEST");
         wattroff(screen,COLOR_PAIR(2));
-
-        mvwprintw(screen,2,6,"Hour: %d:%d:%d", current_hour, current_min, current_sec);
-        mvwprintw(screen,3,6,"DATE: %d-%d-%d", current_day, current_month, current_year);
-
+        wattroff(screen,A_BOLD);
         wattron(screen,COLOR_PAIR(1));
-        mvwprintw(screen,4,3,"--- q to quit ---");
+        mvwprintw(screen,2,3,"--- q to quit ---");
         wattroff(screen,COLOR_PAIR(1));
 
-        mvwprintw(top_right_w,3,6,"top right");
+        mvwprintw(top_right_w,2,6,"Hour: %d:%d:%d", current_hour, current_min, current_sec);
+        mvwprintw(top_right_w,3,6,"DATE: %d-%d-%d", current_day, current_month, current_year);
+
         mvwprintw(bottom_right_w,3,6,"bottom right");
 
         wrefresh(screen);
@@ -113,4 +114,3 @@ int main(void) {
 
         return 0;
 }
-  
