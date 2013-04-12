@@ -1,0 +1,47 @@
+FABRIC
+http://docs.fabfile.org/en/1.6/
+
+Fabric is a Python (2.5 or higher) library and command-line tool for streamlining the use of SSH for application deployment or systems administration tasks.
+It provides a basic suite of operations for executing local or remote shell commands (normally or via sudo) and uploading/downloading files, as well as auxiliary functionality such as prompting the running user for input, or aborting execution.
+
+#	Install fabric:
+#	apt-get install fabric
+#
+#
+
+BIG FAT NOTE:
+-by default, on Ubuntu 10.04 LTS, the fabric version is 0.9.0 (pretty old) and this version comes wit a LOT of limitations.
+For example this WILL NOT WORK:
+
+[code above]
+def copy_to_remote():
+        # run with: fab dev_server copy_to_remote:/home/andy/test_deployment/fabric-test
+        # make sure the directory is there!
+        # create a directory
+        now = datetime.datetime.now()
+        remote_dir = now.strftime("%Y-%m-%d---%H:%M")
+        with cd(remote_path):
+                run('mkdir -p %s' % remote_dir)
+
+FAIL !!!        put(filename, remote_dir)
+                with cd(remote_dir):
+[code below]
+
+When running the file, we get the error:
+Fatal error: put() encountered an exception while uploading 'some_folder'
+Underlying exception message:
+Is a directory
+Aborting.
+				
+
+Unfortunately, this is a limitation of Paramiko; its SFTP module is only capable of handling one file at a time.
+
+If you look in fabric.contrib.project there's an upload_project function which gets around this by tarring up the directory, sftp'ing that, then untarring it again. From your perspective it's just what you ask for, you give it a local directory and remote location and it does the job.
+
+
+
+
+
+
+
+
