@@ -10,7 +10,7 @@ It provides a basic suite of operations for executing local or remote shell comm
 #
 
 BIG FAT NOTE:
--by default, on Ubuntu 10.04 LTS, the fabric version is 0.9.0 (pretty old) and this version comes wit a LOT of limitations.
+-by default, on Ubuntu 10.04 LTS, the fabric version is 0.9.0 (pretty old) and this version comes with a LOT of limitations.
 For example this WILL NOT WORK:
 
 [code above]
