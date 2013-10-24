@@ -15,7 +15,34 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ######################################################################################################
+# 					Text color variables
+bold=$(tput bold)             # Bold
+red=${txtbld}$(tput setaf 1) #  red
+blue=${txtbld}$(tput setaf 4) #  blue
+green=${txtbld}$(tput setaf 2) #  green
+txtreset=$(tput sgr0)             # Reset
+######################################################################################################
+#                 Checking availability of turbolift                  
+which turbolift &> /dev/null
 
+[ $? -ne 0 ]  && \
+echo "" && \
+echo "${red}Turbolift utility is not available ... Install it${txtreset}" &&  \
+echo "" && \
+echo "${green}Prerequisites :${txtreset}" && \
+echo "For all the things to work right please make sure you have python-dev" && \
+echo "All systems require the python-setuptools package." && \
+echo "Python => 2.6 but < 3.0" && \
+echo "A File or some Files you want uploaded" && \
+echo "" && \
+echo "${green}Installation :${txtreset}" && \
+echo "git clone git://github.com/cloudnull/turbolift.git" && \
+echo "cd turbolift" && \
+echo "python setup.py install" && \
+echo "" && \
+echo "${red}Script terminated.${txtreset}" && \
+exit 1
+######################################################################################################
 #	GLOBALS
 
 SCRIPT_SOURCE="${BASH_SOURCE[0]}"
