@@ -16,11 +16,11 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ######################################################################################################
 # 					Text color variables
-bold=$(tput bold)             # Bold
-red=${txtbld}$(tput setaf 1) #  red
-blue=${txtbld}$(tput setaf 4) #  blue
-green=${txtbld}$(tput setaf 2) #  green
-txtreset=$(tput sgr0)             # Reset
+bold=$(tput bold)             	# Bold
+red=${txtbld}$(tput setaf 1) 	# Red
+blue=${txtbld}$(tput setaf 4) 	# Blue
+green=${txtbld}$(tput setaf 2) 	# Green
+txtreset=$(tput sgr0)          	# Reset
 ######################################################################################################
 #                 Checking availability of turbolift                  
 which turbolift &> /dev/null
@@ -49,10 +49,12 @@ SCRIPT_SOURCE="${BASH_SOURCE[0]}"
 SCRIPT_DIR="$( cd -P "$( dirname "$SCRIPT_SOURCE" )" && pwd )"
 SCRIPT_NAME="${0##*/}"
 shopt -s globstar
-_now=$(date +"%Y_%m_%d_%T")     													# display DATE -> year-month-day-hour-minute-seconds
+_now=$(date +"%Y-%m-%d_%T")     													# display DATE -> year-month-day-hour-minute-seconds
 
-declare log_file="/home/andy/Documents/testing-grounds/logs/CDN-sync_$_now" 		# change this
-declare log_removed="/home/andy/Documents/testing-grounds/logs/CDN-removed_$_now"	# change this
+declare LOG_DIR="/var/log/cdn-sync"
+declare log_file="$LOG_DIR/CDN-sync_$_now"
+declare CDN_log_file="$LOG_DIR/CDN-log"  		# change this
+declare log_removed="$LOG_DIR/CDN-remove_$_now"	# change this
 
 # Some default values
 CDN_ID=""																			# add your ID
@@ -60,27 +62,86 @@ CDN_KEY=""																			# add your API KEY
 CDN_REGION=""																		# region (dfw, ord, lon, iad, syd)
 CDN_CONTAINER=""
 SFTP_CONTAINER="/home/andy/Documents/testing-grounds/turbolift-test"				# change this
-SFTP_FILES="/home/andy/Documents/testing-grounds/logs/sftp-files"					# change this
+SFTP_FILES="$LOG_DIR/sftp-files"					# change this
+######################################################################################################
+#       Turbolift requires root privileges
+ROOT_UID=0             # Root has $UID 0.
+E_NOTROOT=101          # Not root user error. 
 
+function check_if_root (){       # is root running the script?
+                      
+  if [ "$UID" -ne "$ROOT_UID" ]
+  then
+	echo ""
+    echo "$(tput bold)${red}Ooops! Must be root to run this script.${txtreset}"
+    echo ""
+    #clear
+    exit $E_NOTROOT
+  fi
+} 
+######################################################################################################
+#       Prepare LOG ENV
+function make_log_env(){
+	echo ""
+	echo "Checking for LOG ENVIRONMENT IN $(tput bold)${green}$LOG_DIR${txtreset}"
+		if [ ! -d "$LOG_DIR" ]; then
+			echo "$(tput bold)${red}LOG environment not present...${txtreset}" && \
+			echo "${green}Creating log environment..."
+			if [ `mkdir -p $LOG_DIR` ]; then
+				echo "ERROR: $* (status $?)" 1>&2
+				exit 1
+			else
+				# success
+				echo "$(tput bold)${green}Success.${txtreset} Log environment created in ${green}$LOG_DIR${txtreset}"
+				echo ""
+				echo "Moving on...."
+				echo ""
+			fi
+		else
+			# success
+			echo "$(tput bold)${green}OK.${txtreset} Log environment present in $(tput bold)${green}$LOG_DIR${txtreset}"
+			echo ""
+			echo "Moving on...."
+			echo ""
+		fi
+}
+######################################################################################################
+function cdn_sync(){
 
-#	UPLOAD new files first
-turbolift -u $CDN_ID -a $CDN_KEY --os-rax-auth $CDN_REGION --verbose --colorized upload --sync -s $SFTP_CONTAINER -c $CDN_CONTAINER
+	#	UPLOAD new files first
+	turbolift -u $CDN_ID -a $CDN_KEY --os-rax-auth $CDN_REGION --verbose --colorized upload --sync -s $SFTP_CONTAINER -c $CDN_CONTAINER
 
-# LIST the files on CDN and save them 
-turbolift -u $CDN_ID -a $CDN_KEY --os-rax-auth $CDN_REGION list -c $CDN_CONTAINER > $log_file
+	# LIST the files on CDN and save them 
+	turbolift -u $CDN_ID -a $CDN_KEY --os-rax-auth $CDN_REGION list -c $CDN_CONTAINER > $log_file
+cat >> $CDN_log_file <<EOF
+${green}***********************************************************
+***	CDN Files - $_now
+***********************************************************${txtreset}
+EOF
 
-# LIST the current files present on SFTP
-ls $SFTP_CONTAINER > $SFTP_FILES
+	cat $log_file >> $CDN_log_file	# keep the original CDN-log
 
-# format CDN file list
-tail -n +6 $log_file | head -n -3 > log_file-new && mv log_file-new $log_file
-sed -e 's/|\(.*\)|/\1/' $log_file > CDN-new && mv CDN-new $log_file
-awk -F'|' '{print $2}' $log_file > CDN-new && mv CDN-new $log_file
+	# LIST the current files present on SFTP
+	ls $SFTP_CONTAINER > $SFTP_FILES
 
-# keep the files that are ONLY on CDN and NOT on SFTP in a separate list.
-# this files will be REMOVED
-fgrep -vf $SFTP_FILES $log_file > $log_removed
+	# format CDN file list
+	tail -n +6 $log_file | head -n -3 > log_file-new && mv log_file-new $log_file
+	sed -e 's/|\(.*\)|/\1/' $log_file > CDN-new && mv CDN-new $log_file
+	awk -F'|' '{print $2}' $log_file > CDN-new && mv CDN-new $log_file
 
+	# keep the files that are ONLY on CDN and NOT on SFTP in a separate list.
+	# this files will be REMOVED
+	fgrep -vf $SFTP_FILES $log_file > $log_removed
+}
+######################################################################################################
+main() {
+	
+	check_if_root
+	make_log_env
+	cdn_sync
+
+}
+main "$@"
 
 
 
