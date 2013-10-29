@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 #    Copyright (C) 2013 Alexandru Iacob
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -15,11 +16,49 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ######################################################################################################
+# IMPORTANT !!!
+# check if we are the only running instance
+#
+PDIR=${0%`basename $0`}
+LOCK_FILE=`basename $0`.lock
+
+if [ -f "${LOCK_FILE}" ]; then
+	# The file exists so read the PID
+	# to see if it is still running
+	MYPID=`head -n 1 "${LOCK_FILE}"`
+ 
+	TEST_RUNNING=`ps -p ${MYPID} | grep ${MYPID}`
+ 
+	if [ -z "${TEST_RUNNING}" ]; then
+		# The process is not running
+		# Echo current PID into lock file
+		# echo "Not running"
+		echo $$ > "${LOCK_FILE}"
+	else
+		echo "`basename $0` is already running [${MYPID}]"
+    exit 0
+	fi
+else
+	echo $$ > "${LOCK_FILE}"
+fi
+# make sure the lockfile is removed when we exit
+trap "rm -f ${LOCK_FILE}; exit" INT TERM EXIT
+
+
+######################################################################################################
+# take care of two very common errors:
+# -referencing undefined variables;
+# -ignoring failing commands
+
+set -o nounset
+set -o errexit
+set -o pipefail    # if you fail on this line, get a newer version of BASH.
+######################################################################################################
 # 					Text color variables
 bold=$(tput bold)             	# Bold
-red=${txtbld}$(tput setaf 1) 	# Red
-blue=${txtbld}$(tput setaf 4) 	# Blue
-green=${txtbld}$(tput setaf 2) 	# Green
+red=${bold}$(tput setaf 1) 		# Red
+blue=${bold}$(tput setaf 4) 	# Blue
+green=${bold}$(tput setaf 2) 	# Green
 txtreset=$(tput sgr0)          	# Reset
 ######################################################################################################
 #                 Checking availability of turbolift                  
@@ -49,7 +88,12 @@ SCRIPT_SOURCE="${BASH_SOURCE[0]}"
 SCRIPT_DIR="$( cd -P "$( dirname "$SCRIPT_SOURCE" )" && pwd )"
 SCRIPT_NAME="${0##*/}"
 shopt -s globstar
-_now=$(date +"%Y-%m-%d_%T")     										# display DATE -> year-month-day-hour-minute-seconds
+_now=$(date +"%Y-%m-%d_%T")
+
+# we will clean the obsolete files from the CDN container every Saturday @ 3:30 AM
+# Store some timestamps for comparison.
+declare -i _elapsed=$(date +%s)
+declare -i _330am_saturday=$(date -d "03:30:00 Saturday" +%s)
 
 declare -r LOG_DIR="/var/log/cdn-sync"
 declare -r log_file="$LOG_DIR/CDN-sync_$_now"
@@ -57,12 +101,19 @@ declare -r CDN_log_file="$LOG_DIR/CDN-log"
 declare -r log_removed="$LOG_DIR/CDN-remove_$_now"						
 
 # Some default values
-CDN_ID=""																# add your ID
-CDN_KEY=""																# add your API KEY
-CDN_REGION=""															# region (dfw, ord, lon, iad, syd)
-CDN_CONTAINER=""														# specify container name
-SFTP_CONTAINER="/home/andy/Documents/testing-grounds/turbolift-test"	# change this
-SFTP_FILES="$LOG_DIR/sftp-files"										# change this
+CDN_ID=""                                                            # add your ID
+CDN_KEY=""                              # add your API KEY
+# Rackspace currently has five compute regions which may be used:
+# dfw -> Dallas/Forth Worth
+# ord -> Chicago
+# syd -> Sydney
+# lon -> London
+# iad -> Northern Virginia
+# Note: Currently the LON region is only avaiable with a UK account, and UK accounts cannot access other regions (check with Rackspace)
+CDN_REGION=""                                                        # region
+CDN_CONTAINER=""                                          # specify container name
+SFTP_CONTAINER="/home/andy/Documents/testing-grounds/turbolift-test"    # change this
+SFTP_FILES="$LOG_DIR/sftp-files"                                        
 ######################################################################################################
 #       Turbolift requires root privileges
 ROOT_UID=0             # Root has $UID 0.
@@ -83,7 +134,7 @@ function check_if_root (){       # is root running the script?
 #       Prepare LOG ENV
 function make_log_env(){
 	echo ""
-	echo "Checking for LOG ENVIRONMENT IN $(tput bold)${green}$LOG_DIR${txtreset}"
+	echo "Checking for LOG ENVIRONMENT in $(tput bold)${green}$LOG_DIR${txtreset}"
 		if [ ! -d "$LOG_DIR" ]; then
 			echo "$(tput bold)${red}LOG environment not present...${txtreset}" && \
 			echo "${green}Creating log environment..."
@@ -145,6 +196,21 @@ EOF
 	fgrep -vf $SFTP_FILES $log_file > $log_removed
 }
 ######################################################################################################
+#       Clean the obsolete files from the CDN container
+#		this function will ONLY run only at specific time.
+#		Check lines 63-66 to change the values
+function remove_obsolete_files(){
+	if [[ $_330am_saturday -ge $_elapsed ]]; then
+		echo "NOT yet ---- testing purpose ---- timestamp $_elapsed"
+		while read line
+		do
+			deleted_file=$line
+			echo "Removing obsolete file - $deleted_file"
+			turbolift -u $CDN_ID -a $CDN_KEY --os-rax-auth $CDN_REGION --verbose --colorized delete --container $CDN_CONTAINER --object $deleted_file
+		done < $log_removed
+	fi	
+}
+######################################################################################################
 #       Clean-up. Unset variables
 function unset_vars(){
 		unset CDN_ID
@@ -153,6 +219,7 @@ function unset_vars(){
 		unset CDN_CONTAINER
 		unset SFTP_CONTAINER
 		unset SFTP_FILES
+		unset _elapsed
 }
 ######################################################################################################
 main() {
@@ -160,7 +227,15 @@ main() {
 	check_if_root
 	make_log_env
 	cdn_sync
+	
+	# Remove obsolete files from the CDN container - ONLY if the time is right :)
+	remove_obsolete_files
+	
+	# Clean up
 	unset_vars
+
+	# remove lock
+	rm -f ${LOCK_FILE}
 
 }
 main "$@"
