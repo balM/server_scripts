@@ -49,20 +49,20 @@ SCRIPT_SOURCE="${BASH_SOURCE[0]}"
 SCRIPT_DIR="$( cd -P "$( dirname "$SCRIPT_SOURCE" )" && pwd )"
 SCRIPT_NAME="${0##*/}"
 shopt -s globstar
-_now=$(date +"%Y-%m-%d_%T")     													# display DATE -> year-month-day-hour-minute-seconds
+_now=$(date +"%Y-%m-%d_%T")     										# display DATE -> year-month-day-hour-minute-seconds
 
-declare LOG_DIR="/var/log/cdn-sync"
-declare log_file="$LOG_DIR/CDN-sync_$_now"
-declare CDN_log_file="$LOG_DIR/CDN-log"  		# change this
-declare log_removed="$LOG_DIR/CDN-remove_$_now"	# change this
+declare -r LOG_DIR="/var/log/cdn-sync"
+declare -r log_file="$LOG_DIR/CDN-sync_$_now"
+declare -r CDN_log_file="$LOG_DIR/CDN-log"  							
+declare -r log_removed="$LOG_DIR/CDN-remove_$_now"						
 
 # Some default values
-CDN_ID=""																			# add your ID
-CDN_KEY=""																			# add your API KEY
-CDN_REGION=""																		# region (dfw, ord, lon, iad, syd)
-CDN_CONTAINER=""
-SFTP_CONTAINER="/home/andy/Documents/testing-grounds/turbolift-test"				# change this
-SFTP_FILES="$LOG_DIR/sftp-files"					# change this
+CDN_ID=""																# add your ID
+CDN_KEY=""																# add your API KEY
+CDN_REGION=""															# region (dfw, ord, lon, iad, syd)
+CDN_CONTAINER=""														# specify container name
+SFTP_CONTAINER="/home/andy/Documents/testing-grounds/turbolift-test"	# change this
+SFTP_FILES="$LOG_DIR/sftp-files"										# change this
 ######################################################################################################
 #       Turbolift requires root privileges
 ROOT_UID=0             # Root has $UID 0.
@@ -122,7 +122,18 @@ EOF
 	cat $log_file >> $CDN_log_file	# keep the original CDN-log
 
 	# LIST the current files present on SFTP
-	ls $SFTP_CONTAINER > $SFTP_FILES
+	# CDN -> we canot have containers inside containers.
+	# BUT, users have the habit to upload full directories to SFTP, so we need to parse them.
+	# on CDN, the files will have the full PATH as name.
+	# we need to remove the first X chars from 'find' output where X -> lenght of SFTP_CONTAINER
+	exclude_str=${#SFTP_CONTAINER}
+	
+	# now we have the lenght of SFTP_CONTAINER. 
+	# we need to +1 - this will include an extra char for the trailing slash
+	((exclude_str++))
+	
+	# now generate the LOG file for SFTP side;
+	find $SFTP_CONTAINER -type f | sed  "s/^.\{$exclude_str\}//g" > $SFTP_FILES
 
 	# format CDN file list
 	tail -n +6 $log_file | head -n -3 > log_file-new && mv log_file-new $log_file
@@ -134,11 +145,22 @@ EOF
 	fgrep -vf $SFTP_FILES $log_file > $log_removed
 }
 ######################################################################################################
+#       Clean-up. Unset variables
+function unset_vars(){
+		unset CDN_ID
+		unset CDN_KEY
+		unset CDN_REGION
+		unset CDN_CONTAINER
+		unset SFTP_CONTAINER
+		unset SFTP_FILES
+}
+######################################################################################################
 main() {
 	
 	check_if_root
 	make_log_env
 	cdn_sync
+	unset_vars
 
 }
 main "$@"
