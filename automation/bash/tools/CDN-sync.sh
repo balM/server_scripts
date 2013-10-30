@@ -16,10 +16,13 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 ######################################################################################################
+set -o nounset
+set -o pipefail    # if you fail on this line, get a newer version of BASH.
+######################################################################################################
 # IMPORTANT !!!
 # check if we are the only running instance
 #
-PDIR=${0%`basename $0`}
+PDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 LOCK_FILE=`basename $0`.lock
 
 if [ -f "${LOCK_FILE}" ]; then
@@ -41,18 +44,9 @@ if [ -f "${LOCK_FILE}" ]; then
 else
 	echo $$ > "${LOCK_FILE}"
 fi
-# make sure the lockfile is removed when we exit
-trap "rm -f ${LOCK_FILE}; exit" INT TERM EXIT
+# make sure the LOCK_FILE is removed when we exit
+trap "rm -f ${LOCK_FILE}" INT TERM EXIT
 
-
-######################################################################################################
-# take care of two very common errors:
-# -referencing undefined variables;
-# -ignoring failing commands
-
-set -o nounset
-set -o errexit
-set -o pipefail    # if you fail on this line, get a newer version of BASH.
 ######################################################################################################
 # 					Text color variables
 bold=$(tput bold)             	# Bold
@@ -83,7 +77,6 @@ echo "${red}Script terminated.${txtreset}" && \
 exit 1
 ######################################################################################################
 #	GLOBALS
-
 SCRIPT_SOURCE="${BASH_SOURCE[0]}"
 SCRIPT_DIR="$( cd -P "$( dirname "$SCRIPT_SOURCE" )" && pwd )"
 SCRIPT_NAME="${0##*/}"
@@ -110,9 +103,9 @@ CDN_KEY=""                              # add your API KEY
 # lon -> London
 # iad -> Northern Virginia
 # Note: Currently the LON region is only avaiable with a UK account, and UK accounts cannot access other regions (check with Rackspace)
-CDN_REGION=""                                                        # region
+CDN_REGION=""                                                        # specify region
 CDN_CONTAINER=""                                          # specify container name
-SFTP_CONTAINER="/home/andy/Documents/testing-grounds/turbolift-test"    # change this
+SFTP_CONTAINER=""    # change this
 SFTP_FILES="$LOG_DIR/sftp-files"                                        
 ######################################################################################################
 #       Turbolift requires root privileges
@@ -200,8 +193,10 @@ EOF
 #		this function will ONLY run only at specific time.
 #		Check lines 63-66 to change the values
 function remove_obsolete_files(){
-	if [[ $_330am_saturday -ge $_elapsed ]]; then
-		echo "NOT yet ---- testing purpose ---- timestamp $_elapsed"
+	if [[ $_330am_saturday -lt $_elapsed ]]; then
+		echo "Cleaning up CDN Container ... "
+	#if [[ $_330am_saturday -gt $_elapsed ]]; then
+	#	echo "NOT yet ---- testing purpose ---- timestamp $_elapsed"
 		while read line
 		do
 			deleted_file=$line
@@ -222,6 +217,22 @@ function unset_vars(){
 		unset _elapsed
 }
 ######################################################################################################
+#       Remove OLD log-files
+function clean_logs(){
+	# run rm only once at the end instead of each time a file is found.
+	echo "" && \
+	echo "${green}Cleaning $1...${txtreset}Removing files older than 3 days..." && \
+	echo ""
+	# for testing purpose, set interval to minutes instead on days
+	#if [ `find $1 -type f -mmin +10 -exec rm '{}' '+'` ]; then
+	if [ `find $1 -type f -mtime +3 -exec rm '{}' '+'` ]; then
+		echo "ERROR: $* (status $?)" 1>&2
+		exit 1
+	else
+		echo "Done."
+	fi
+}
+######################################################################################################
 main() {
 	
 	check_if_root
@@ -232,24 +243,11 @@ main() {
 	remove_obsolete_files
 	
 	# Clean up
+	clean_logs "$LOG_DIR"
 	unset_vars
 
 	# remove lock
 	rm -f ${LOCK_FILE}
-
+	exit 0
 }
 main "$@"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
