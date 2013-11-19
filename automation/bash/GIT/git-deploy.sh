@@ -61,11 +61,6 @@ txtreset=$(tput sgr0)          	# Reset
 color_normal="`echo -e '\r\e[0;1m'`"
 color_reverse="`echo -e '\r\e[1;7m'`"
 
-# keys
-arrow_up="`echo -e '\e[A'`"
-arrow_down="`echo -e '\e[B'`"
-escape_key="`echo -e '\e'`"
-new_line="`echo -e '\n'`"
 ######################################################################################################
 #                 Checking availability of GIT                  
 which git &> /dev/null
@@ -85,6 +80,14 @@ echo "${red}Script terminated.${txtreset}" && \
 exit 1
 ######################################################################################################
 #	GLOBALS
+
+# CONFIG FILE
+declare -r CONFIG_FILE="$PDIR/config.cfg"
+#GIT_HOST -> read from config.cfg
+#GIT_REPO_DIR -> read from config.cfg
+#WEB_DEPLOY_DIR -> read from config.cfg
+#APACHE_VHOST_DIR -> read from config.cfg
+
 SCRIPT_SOURCE="${BASH_SOURCE[0]}"
 SCRIPT_DIR="$( cd -P "$( dirname "$SCRIPT_SOURCE" )" && pwd )"
 SCRIPT_NAME="${0##*/}"
@@ -94,8 +97,7 @@ _now=$(date +"%Y-%m-%d_%T")
 VHOST=false
 declare PROJECT_NAME=""
 declare PROJECT_DESC=""
-#	change below
-declare -r GIT_HOST="mydomain.com"
+
 
 declare -r LOG_DIR="/var/log/git-deploy"
 declare -r LOG_FILE="$LOG_DIR/GIT_deploy_$_now"
@@ -105,9 +107,7 @@ declare -r GIT_CONFIG_FOLDER=".git"
 declare -r GIT_SCRIPT_FOLDER="hooks"
 declare -r GIT_POST_UPDATE_INIT="post-update.sample"
 declare -r GIT_POST_UPDATE="post-update"
-declare -r GIT_REPO_DIR="/opt/repos"
-#	change below - for testing purposes, this was setup to a HOME folder
-declare -r WEB_DEPLOY_DIR="/home/andy/Documents/testing-grounds/var-www-deployments"
+
 declare -r WEB_DEPLOY_VHOST_DIR="www"
 declare -r VHOST_INDEX="index.html"
 declare -r APPEND_WEB="_web"
@@ -120,19 +120,8 @@ GIT_PUSH="git push"
 GIT_INIT_COMMIT_MSG=" -- Innitial commit. Create .gitignore file."
 GIT_VHOST_COMMIT_MSG=" -- Add default folder for VHOST. Create index file"
 
-# APACHE
-declare -r APACHE_VHOST_DIR="/etc/apache2/sites-available"
-
-#declare -r APACHE_VHOST_DIR="/home/andy/Documents/testing-grounds/webserver-etc-apache2-sites-available"
 declare -r APACHE_VHOST_FILE="vhost_"
 declare -r APACHE_LOG_DIR="/var/log/apache2"
-
-#DRUPAL
-#declare -r DRUPAL_STABLE="http://ftp.drupal.org/files/projects/drupal-7.23.tar.gz"
-#declare -r DRUPAL_INIT_SETTINGS="sites/default/default.setting.php"
-#declare -r DRUPAL_SETTINGS="sites/default/setting.php"
-#declare -r DRUPAL_FILES_FOLDER="sites/default/files"
-#decalre -r DRUPAL_PRIVATE_FOLDER="sites/default/private"
 
 declare -a DIRS
 declare -i REPLY=0
@@ -141,7 +130,8 @@ declare -i REPLY=0
 ROOT_UID=0             # Root has $UID 0.
 E_NOTROOT=101          # Not root user error. 
 
-function check_if_root (){       # is root running the script?
+#	is root running the script?
+function check_if_root (){       
                       
   if [ "$UID" -ne "$ROOT_UID" ]
   then
@@ -171,7 +161,7 @@ function make_log_env(){
 			fi
 		else
 			#	success
-			echo "$(tput bold)${green}OK.${txtreset} Log environment present in $(tput bold)${green}$LOG_DIR${txtreset}"
+			echo "$color_reverse$(tput bold)${green}OK.${txtreset} Log environment present in $(tput bold)${green}$LOG_DIR${txtreset}"
 			echo ""
 			echo "Moving on...."
 			echo ""
@@ -434,14 +424,31 @@ function create_ci_deploy(){
 	exit
 }
 ######################################################################################################
+#       View CONFIG
+function view_config(){
+	#echo "$color_reverse Current running CONFIG:${txtreset}"
+	echo
+	OUT=$(awk '{ print $1 }' $CONFIG_FILE)
+	echo "$color_reverse *** Current running CONFIG: ***$color_normal"
+	echo
+	for lines in $OUT
+	do
+		echo $lines
+	done
+	
+	echo
+	echo "*** To change the settings, please edit the $(tput bold)${green}$CONFIG_FILE${txtreset} file ***"
+}
+######################################################################################################
 function showMenu () {
 	echo ""
-	echo "$(tput bold)${blue}<<< GIT DEPLOY >>>  Please select from available options:${txtreset}"
+	echo "$color_reverse$(tput bold)${blue}<<< GIT DEPLOY >>>  Please select from available options:${txtreset}"
 	echo ""
 	echo "1) Create NEW git deployment - no VHOST"
 	echo "2) Create NEW git deployment - with VHOST"	
 	echo "3) $(tput bold)${red}Create NEW DRUPAL deployment${txtreset}"
 	echo "4) $(tput bold)${red}Create NEW CODEIGNITER deployment${txtreset}"
+	echo "5) $(tput bold)${blue}View settings${txtreset}"
 	echo "q) Quit"
 }
 ######################################################################################################
@@ -456,6 +463,18 @@ main() {
 	#	clear screen
 	clear
 	check_if_root
+	
+	echo
+	echo "$color_reverse Reading config....${txtreset}" >&2
+	source $CONFIG_FILE
+	
+	if [ "$?" = "0" ]; then
+		echo "$color_reverse$(tput bold)${green}OK.${txtreset}"
+	else
+		echo "$color_reverse$(tput bold)${red}Cannot read CONFIGURATION FILE! ${txtreset}" 1>&2
+	exit 1
+	fi
+	
 	make_log_env
 	
 	#	enter loop
@@ -483,7 +502,11 @@ main() {
 						echo ""
                         echo "$(tput bold)${green}Create NEW CODEIGNITER deployment${txtreset}"
                         VHOST=true
-                        create_ci_deploy ;;                 
+                        create_ci_deploy ;;
+                "5")
+						echo ""
+                        echo "$(tput bold)${blue}View settings${txtreset}"
+                        view_config ;;             
                 "q")
 						echo ""
                         echo "$(tput bold)${red}Script terminated.${txtreset}"

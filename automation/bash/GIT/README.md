@@ -7,4 +7,6 @@ There are 4 VARIABLES that the user needs to change according to his specific en
 - WEB_DEPLOY_DIR - needed for VHOST configuration;
 - APACHE_VHOST_DIR - usually /etc/apache2/sites-available
 
+All the settings can be changed in the "config.cfg" file
+
 NOTE: the script will work on DEBIAN based distros. I have tested the functionality in the latest DEBIAN stable and Ubuntu Server 12.04 LTS.
