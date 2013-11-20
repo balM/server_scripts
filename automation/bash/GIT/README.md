@@ -9,4 +9,7 @@ There are 4 VARIABLES that the user needs to change according to his specific en
 
 All the settings can be changed in the "config.cfg" file
 
+The script will also check if teh values from "config.cfg" are correct.
+If the values do not exist, we will give the user option to create the structure on-the-fly.
+
 NOTE: the script will work on DEBIAN based distros. I have tested the functionality in the latest DEBIAN stable and Ubuntu Server 12.04 LTS.
