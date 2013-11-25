@@ -84,6 +84,10 @@ exit 1
 ######################################################################################################
 #	GLOBALS
 
+OS_NAME=$(lsb_release -si)
+OS_ARCH=$(uname -m | sed 's/x86_//;s/i[3-6]86/32/')
+OS_VERSION=$(lsb_release -sr)
+
 # CONFIG FILE
 declare -r CONFIG_FILE="$SCRIPT_DIR/config.cfg"
 
@@ -93,6 +97,7 @@ declare -r CONFIG_FILE="$SCRIPT_DIR/config.cfg"
 _now=$(date +"%Y-%m-%d_%T")
 
 VHOST=false
+declare ENVIRONMENT=""
 declare PROJECT_NAME=""
 declare PROJECT_DESC=""
 
@@ -118,10 +123,21 @@ GIT_INIT_COMMIT_MSG=" -- Innitial commit. Create .gitignore file."
 GIT_VHOST_COMMIT_MSG=" -- Add default folder for VHOST. Create index file"
 
 declare -r APACHE_VHOST_FILE="vhost_"
-declare -r APACHE_LOG_DIR="/var/log/apache2"
+declare -r APACHE_LOG_DIR="APACHE_LOG_DIR"
 
 declare -a DIRS
 declare -i REPLY=0
+
+#	messsages
+declare -r HTACCESS_MSG="
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+ !!!                                      PLEASE NOTE                                      !!!
+ !!!      That you will have to edit .htacces file for the new created project             !!!
+ !!!      and restrict the access to the VHOST for the internal IP only	(for DEVELOPMENT)  !!!
+ !!!      For STAGING, please add password protection to VHOST                             !!!
+ !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+"
+
 ######################################################################################################
 #       We require root privileges
 ROOT_UID=0             # Root has $UID 0.
@@ -228,7 +244,9 @@ if ! $VHOST ; then
 	exit 1
 	fi
 		echo "$color_reverse$(tput bold)${green}Please clone the GIT repository from the following URL:${txtreset}   ssh://git@$GIT_HOST${DIRS[$REPLY - 1]}/$PROJECT_NAME"
+		echo "$HTACCESS_MSG"
 		echo "$color_reverse$(tput bold)${green}Bye.${txtreset}"
+		echo
 		
 else
 		###################
@@ -413,13 +431,13 @@ EOF
                 allow from all
         </Directory>
 
-        ErrorLog ${APACHE_LOG_DIR}/$PROJECT_NAME-error.log
+        ErrorLog \${$APACHE_LOG_DIR}/$PROJECT_NAME-error.log
 
         # Possible values include: debug, info, notice, warn, error, crit,
         # alert, emerg.
         LogLevel warn
 
-        CustomLog ${APACHE_LOG_DIR}/$PROJECT_NAME-access.log forwarded
+        CustomLog \${$APACHE_LOG_DIR}/$PROJECT_NAME-access.log forwarded
 
 </VirtualHost>	
 EOF
@@ -430,8 +448,11 @@ EOF
 	apache2ctl graceful
 	
 	#	return clone URL
+	echo
 	echo "$color_reverse$(tput bold)${green}Please clone the GIT repository from the following URL:${txtreset}   ssh://git@$GIT_HOST${DIRS[$REPLY - 1]}/$PROJECT_NAME"
+	echo "$HTACCESS_MSG"
 	echo "$color_reverse$(tput bold)${green}Bye.${txtreset}"
+	echo
 	
 fi
 }
@@ -454,18 +475,18 @@ function create_ci_deploy(){
 ######################################################################################################
 #       View CONFIG
 function view_config(){
-	#echo "$color_reverse Current running CONFIG:${txtreset}"
 	echo
-	OUT=$(awk '{ print $1 }' $CONFIG_FILE)
-	echo "$color_reverse *** Current running CONFIG: ***$color_normal"
-	echo
-	for lines in $OUT
-	do
-		echo $lines
-	done
+    cfg.section.$ENVIRONMENT
 	
+	echo "$color_reverse *** Current running CONFIG: $ENVIRONMENT ***$color_normal"
+	echo
+	echo "GIT_HOST=$GIT_HOST"
+	echo "GIT_REPO_DIR=$GIT_REPO_DIR"
+	echo "WEB_DEPLOY_DIR=$WEB_DEPLOY_DIR"
+	echo "APACHE_VHOST_DIR=$APACHE_VHOST_DIR"
 	echo
 	echo "*** To change the settings, please edit the $(tput bold)${green}$CONFIG_FILE${txtreset} file ***"
+	echo
 }
 ######################################################################################################
 #       Check CONFIG
@@ -564,7 +585,7 @@ function create_cfg_folder () {
 }
 ######################################################################################################
 function showMenu () {
-	echo "$color_reverse$(tput bold)${blue}<<< GIT DEPLOY >>>  Please select from available options:${txtreset}"
+	echo "$color_reverse$(tput bold)${blue}<<< Please select from available options: >>>${txtreset}"
 	echo ""
 	echo "1) Create NEW git deployment - no VHOST"
 	echo "2) Create NEW git deployment - with VHOST"	
@@ -574,24 +595,95 @@ function showMenu () {
 	echo "q) Quit"
 }
 ######################################################################################################
+function select_env () {
+	echo "$color_reverse$(tput bold)${blue}<<< Please select ENVIRONMENT: >>>${txtreset}"
+	echo ""
+	echo "1) Development"
+	echo "2) Staging"
+	echo "q) Quit"
+}
+######################################################################################################
+#	Config parser
+function config_parser(){
+    ini="$(<$1)"                # read the file
+    ini="${ini//[/\[}"          # escape [
+    ini="${ini//]/\]}"          # escape ]
+    IFS=$'\n' && ini=( ${ini} ) # convert to line-array
+    ini=( ${ini[*]//;*/} )      # remove comments with ;
+    ini=( ${ini[*]/\    =/=} )  # remove tabs before =
+    ini=( ${ini[*]/=\   /=} )   # remove tabs be =
+    ini=( ${ini[*]/\ =\ /=} )   # remove anything with a space around =
+    ini=( ${ini[*]/#\\[/\}$'\n'cfg.section.} ) # set section prefix
+    ini=( ${ini[*]/%\\]/ \(} )    # convert text2function (1)
+    ini=( ${ini[*]/=/=\( } )    # convert item to array
+    ini=( ${ini[*]/%/ \)} )     # close array parenthesis
+    ini=( ${ini[*]/%\\ \)/ \\} ) # the multiline trick
+    ini=( ${ini[*]/%\( \)/\(\) \{} ) # convert text2function (2)
+    ini=( ${ini[*]/%\} \)/\}} ) # remove extra parenthesis
+    ini[0]="" # remove first element
+    ini[${#ini[*]} + 1]='}'    # add the last brace
+    eval "$(echo "${ini[*]}")" # eval the result
+}
+######################################################################################################
 #       Clean-up. Unset variables
 function unset_vars(){
+		unset IFS	#	important!
 		unset DIRS
 		unset REPLY
+		unset GIT_HOST
+		unset GIT_REPO_DIR
+		unset WEB_DEPLOY_DIR
+		unset APACHE_VHOST_DIR
+		unset ENVIRONMENT
+		unset GIT_INIT
 		unset GIT_BARE
+		unset GIT_STAGE
+		unset GIT_COMMIT
+		unset GIT_PUSH
+		unset GIT_INIT_COMMIT_MSG
+		unset GIT_VHOST_COMMIT_MSG
 }
 ######################################################################################################
 main() {
 	#	clear screen
 	clear
+	echo
+	echo "$color_reverse$(tput bold)${blue}<<< GIT DEPLOY >>>  Running on $OS_NAME $OS_VERSION - $OS_ARCH-bit${txtreset}"
+		
 	check_if_root
 	
 	#	read CONFIG FILE
 	echo
-	source $CONFIG_FILE
+	select_env
+	echo
+	read -p "Please select environment: " ENV_CHOICE
+			case "$ENV_CHOICE" in
+                "1")
+						echo
+                        echo "$(tput bold)${green}DEVELOPMENT${txtreset} environment."
+                        ENVIRONMENT="DEVELOPMENT"
+                        config_parser 'config.cfg'
+                        cfg.section.$ENVIRONMENT
+                        echo ;;                   
+                "2")
+						echo ""
+                        echo "$(tput bold)${green}STAGING${txtreset} environment."
+                        ENVIRONMENT="STAGING"
+                        config_parser 'config.cfg'
+                        cfg.section.$ENVIRONMENT
+                        echo ;;             
+                "q")
+						echo
+                        echo "$(tput bold)${red}Script terminated.${txtreset}"
+                        echo
+                        exit
+                        ;;
+			esac
+			
+	#	check if config.cfg file exists
 		
-	if [ "$?" = "0" ]; then
-		echo "$color_reverse Reading config....${txtreset} $(tput bold)${green}OK.${txtreset}"
+	if [ -f "$CONFIG_FILE" ]; then
+		echo "$color_reverse Reading $ENVIRONMENT config....${txtreset} $(tput bold)${green}OK.${txtreset}"
 		check_config
 	else
 		echo "$color_reverse$(tput bold)${red}Cannot read CONFIGURATION FILE! ${txtreset}"
@@ -608,32 +700,33 @@ main() {
 	while [ 1 ]
 		do
 			showMenu
-			read CHOICE
+			echo
+			read -p "Please select an option: " CHOICE
 			case "$CHOICE" in
                 "1")
 						echo ""
                         echo "$(tput bold)${green}Create NEW git deployment - no VHOST${txtreset}"
+                        unset IFS	#	important!
                         VHOST=false
                         select_repo_folder ;;
                 "2")
 						echo ""
                         echo "$(tput bold)${green}Create NEW git deployment - with VHOST${txtreset}"
+                        unset IFS	#	important!
                         VHOST=true 
                         select_repo_folder ;;
                 "3")
-						echo ""
-                        echo "$(tput bold)${green}Create NEW DRUPAL deployment${txtreset}"
+						echo
+						unset IFS	#	important!
                         VHOST=true
                         create_drupal_deploy ;;
                 "4")
-						echo ""
-                        echo "$(tput bold)${green}Create NEW CODEIGNITER deployment${txtreset}"
+						echo
+						unset IFS	#	important!
                         VHOST=true
                         create_ci_deploy ;;
                 "5")
-						echo ""
-                        echo "$(tput bold)${blue}View settings${txtreset}"
-                        view_config ;;             
+						view_config ;;             
                 "q")
 						echo ""
                         echo "$(tput bold)${red}Script terminated.${txtreset}"
