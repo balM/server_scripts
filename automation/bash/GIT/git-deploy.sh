@@ -155,6 +155,30 @@ function check_if_root (){
   fi
 } 
 ######################################################################################################
+#       Check git privileges
+function check_git_shell (){
+		       
+	ENVIRONMENT="GIT"
+	cfg.section.$ENVIRONMENT
+	
+	#	get current shell
+	CURRENT_GIT_SHELL=`cat /etc/passwd | grep -Ew ^$GIT_USER | cut -d":" -f7`                    
+	
+	#	check if we are running the correct one
+	if [ "$CURRENT_GIT_SHELL" != "GIT_SHELL" ]; then
+		echo ""
+		echo "$color_reverse$(tput bold)${red}                                ${txtreset}"
+		echo "$color_reverse$(tput bold)${red}!!!     SECURITY WARNING     !!!${txtreset}"
+		echo "$color_reverse$(tput bold)${red}                                ${txtreset}"
+		echo ""
+		echo "$color_reverse$(tput bold)${red}Please change the SHELL under which GIT user is running to: $GIT_SHELL${txtreset}"
+		echo "$color_reverse$(tput bold)${blue}Current SHELL: $CURRENT_GIT_SHELL${txtreset}"
+		echo ""
+		echo "$color_reverse$(tput bold)${red}Continue at your own risk!${txtreset}"
+		echo ""
+	fi
+} 
+######################################################################################################
 #       Prepare LOG ENV
 function make_log_env(){
 	echo ""
@@ -245,6 +269,8 @@ if ! $VHOST ; then
 	fi
 		echo "$color_reverse$(tput bold)${green}Please clone the GIT repository from the following URL:${txtreset}   ssh://git@$GIT_HOST${DIRS[$REPLY - 1]}/$PROJECT_NAME"
 		echo "$HTACCESS_MSG"
+		#	change permissions
+		chown -R $GIT_USER ${DIRS[$REPLY - 1]}/$PROJECT_NAME
 		echo "$color_reverse$(tput bold)${green}Bye.${txtreset}"
 		echo
 		
@@ -413,7 +439,7 @@ EOF
 	echo "`$GIT_COMMIT\"$PROJECT_NAME${GIT_VHOST_COMMIT_MSG}\"`" >> $LOG_FILE
 	#	second PUSH to remote hub
 	echo `git push ${DIRS[$REPLY - 1]}/$PROJECT_NAME master`
-	
+		
 	#	create VHOST file
 	cd $APACHE_VHOST_DIR
 	
@@ -426,9 +452,7 @@ EOF
         DocumentRoot $WEB_DEPLOY_DIR/$PROJECT_NAME$APPEND_WEB/$WEB_DEPLOY_VHOST_DIR
         <Directory $WEB_DEPLOY_DIR/$PROJECT_NAME$APPEND_WEB/$WEB_DEPLOY_VHOST_DIR>
                 Options -Indexes FollowSymLinks MultiViews
-                AllowOverride None
-                Order allow,deny
-                allow from all
+                AllowOverride All
         </Directory>
 
         ErrorLog \${$APACHE_LOG_DIR}/$PROJECT_NAME-error.log
@@ -451,6 +475,10 @@ EOF
 	echo
 	echo "$color_reverse$(tput bold)${green}Please clone the GIT repository from the following URL:${txtreset}   ssh://git@$GIT_HOST${DIRS[$REPLY - 1]}/$PROJECT_NAME"
 	echo "$HTACCESS_MSG"
+	#	change permissions
+	chown -R $GIT_USER $WEB_DEPLOY_DIR/$PROJECT_NAME$APPEND_WEB
+	chown -R $GIT_USER ${DIRS[$REPLY - 1]}/$PROJECT_NAME
+	
 	echo "$color_reverse$(tput bold)${green}Bye.${txtreset}"
 	echo
 	
@@ -651,6 +679,8 @@ main() {
 	echo "$color_reverse$(tput bold)${blue}<<< GIT DEPLOY >>>  Running on $OS_NAME $OS_VERSION - $OS_ARCH-bit${txtreset}"
 		
 	check_if_root
+	config_parser 'config.cfg'
+	check_git_shell
 	
 	#	read CONFIG FILE
 	echo
@@ -662,14 +692,12 @@ main() {
 						echo
                         echo "$(tput bold)${green}DEVELOPMENT${txtreset} environment."
                         ENVIRONMENT="DEVELOPMENT"
-                        config_parser 'config.cfg'
                         cfg.section.$ENVIRONMENT
                         echo ;;                   
                 "2")
 						echo ""
                         echo "$(tput bold)${green}STAGING${txtreset} environment."
                         ENVIRONMENT="STAGING"
-                        config_parser 'config.cfg'
                         cfg.section.$ENVIRONMENT
                         echo ;;             
                 "q")
