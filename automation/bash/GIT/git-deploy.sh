@@ -165,7 +165,7 @@ function check_git_shell (){
 	CURRENT_GIT_SHELL=`cat /etc/passwd | grep -Ew ^$GIT_USER | cut -d":" -f7`                    
 	
 	#	check if we are running the correct one
-	if [ "$CURRENT_GIT_SHELL" != "GIT_SHELL" ]; then
+	if [ "$CURRENT_GIT_SHELL" != "$GIT_SHELL" ]; then
 		echo ""
 		echo "$color_reverse$(tput bold)${red}                                ${txtreset}"
 		echo "$color_reverse$(tput bold)${red}!!!     SECURITY WARNING     !!!${txtreset}"
