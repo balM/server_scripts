@@ -156,6 +156,10 @@ function check_if_root (){
 } 
 ######################################################################################################
 #       Check git privileges
+#	GIT should ALWAYS use a restricted SHELL
+#	usually /usr/bin/git-shell according to https://www.kernel.org/pub/software/scm/git/docs/git-shell.html
+#	if for any reasons GIT is running under a different shell
+#	the script will display a security warning
 function check_git_shell (){
 		       
 	ENVIRONMENT="GIT"
@@ -213,6 +217,8 @@ function select_repo_folder () {
 
 	select opt in "${DIRS[@]}" "Back" ; do
 	if (( REPLY == 1 + ${#DIRS[@]} )) ; then
+		#	return to base :)
+		cd $SCRIPT_DIR
 		main
 	elif (( REPLY > 0 && REPLY <= ${#DIRS[@]} )) ; then
 		echo "Selected"
